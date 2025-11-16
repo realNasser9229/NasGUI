@@ -8,6 +8,134 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 
+-- EXTREME NasGUI v2.0 REBORN MODDED INTRO (NO LOADSTRING, NO RUN FUNCTION)
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+
+-- CLEANUP
+if CoreGui:FindFirstChild("NasIntroV2") then
+    CoreGui.NasIntroV2:Destroy()
+end
+
+local scr = Instance.new("ScreenGui")
+scr.Name = "NasIntroV2"
+scr.Parent = CoreGui
+scr.IgnoreGuiInset = true
+
+-- BLUR
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = game:GetService("Lighting")
+
+local function fadeBlur(startSize, endSize, duration)
+    task.spawn(function()
+        local elapsed = 0
+        while elapsed < duration do
+            local delta = RunService.RenderStepped:Wait()
+            elapsed += delta
+            blur.Size = startSize + (endSize - startSize) * (elapsed/duration)
+        end
+        blur.Size = endSize
+    end)
+end
+
+-- FADE FUNCTION
+local function fade(obj, startT, endT, duration)
+    task.spawn(function()
+        local elapsed = 0
+        while elapsed < duration do
+            local delta = RunService.RenderStepped:Wait()
+            elapsed += delta
+            local alpha = math.clamp(startT + (endT - startT)*(elapsed/duration),0,1)
+
+            if obj:IsA("Frame") then
+                obj.BackgroundTransparency = 1 - alpha
+            elseif obj:IsA("TextLabel") then
+                obj.TextTransparency = 1 - alpha
+            end
+        end
+
+        if obj:IsA("Frame") then
+            obj.BackgroundTransparency = 1 - endT
+        elseif obj:IsA("TextLabel") then
+            obj.TextTransparency = 1 - endT
+        end
+    end)
+end
+
+-- BACKGROUND
+local bg = Instance.new("Frame", scr)
+bg.Size = UDim2.new(1,0,1,0)
+bg.BackgroundColor3 = Color3.fromRGB(200,0,0)
+bg.BackgroundTransparency = 1
+bg.BorderSizePixel = 0
+
+local gradient = Instance.new("UIGradient", bg)
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180,0,0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255,50,50))
+}
+gradient.Rotation = 45
+
+-- TEXT
+local title = Instance.new("TextLabel", scr)
+title.Size = UDim2.new(1,-40,0,80)
+title.Position = UDim2.new(0,20,0.35,0)
+title.BackgroundTransparency = 1
+title.Text = "NASGUI v2.0 REBORN MODDED"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 40
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextTransparency = 1
+title.TextScaled = true
+
+local sub = Instance.new("TextLabel", scr)
+sub.Size = UDim2.new(1,-40,0,40)
+sub.Position = UDim2.new(0,20,0.5,0)
+sub.BackgroundTransparency = 1
+sub.Text = "UNLEASHING CHAOS..."
+sub.Font = Enum.Font.GothamBold
+sub.TextSize = 24
+sub.TextColor3 = Color3.fromRGB(255,255,255)
+sub.TextTransparency = 1
+sub.TextScaled = true
+
+-- AUDIO
+local sound = Instance.new("Sound", scr)
+sound.SoundId = "rbxassetid://9085309015"
+sound.Volume = 1
+sound:Play()
+
+---------------------------------------------------
+-- INTRO SEQUENCE ONLY
+---------------------------------------------------
+
+fadeBlur(0,25,0.8)
+task.wait(0.8)
+
+fade(bg,1,0,1.0)
+fade(title,1,0,1.0)
+fade(sub,1,0,1.0)
+task.wait(1.0)
+
+task.wait(1.2)
+
+fade(title,0,1,0.8)
+fade(sub,0,1,0.8)
+fade(bg,0,1,0.8)
+task.wait(0.8)
+
+-- AT THIS POINT, YOUR NASGUI CODE WILL CONTINUE EXECUTING AUTOMATICALLY
+-- (because this intro runs first)
+
+task.wait(0.5)
+fadeBlur(25,0,1.0)
+task.wait(1.0)
+
+scr:Destroy()
+blur:Destroy()
+
+
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
 startupSound.SoundId = "rbxassetid://126083075694948"
