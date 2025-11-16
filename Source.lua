@@ -1,5 +1,12 @@
 print(">> Nas9229alt's SUPER OP NasGUI V2.0 loaded successfully, GO REKT THEM NOW!!! (BY NAS / nas9229alt & JAN / 1602sasa2)")
 
+-- Extra hype paragraph
+print([[
+Welcome to NasGUI V2.0 – the ultimate game-breaching experience! 
+Prepare yourself for an unstoppable arsenal of features: custom admin commands, player utilities, remote scanning, and much more. 
+Everything has been optimized for speed and power, giving you full control over your gameplay. 
+This is the culmination of pure skill and coding precision by Nas9229alt & Jan – enjoy responsibly and have fun dominating the server!
+]])
 
 -- Services
 local Players = game:GetService("Players")
