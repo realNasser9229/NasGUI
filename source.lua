@@ -1,6 +1,6 @@
 print(">> Nas9229alt's SUPER OP NasGUI V2.0 loaded successfully, GO REKT THEM NOW!!! (BY NAS / nas9229alt & JAN / 1602sasa2)")
 
-
+local function init()
 -- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -1362,3 +1362,4 @@ yPos += 40
 miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollMisc.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y)
 end)
+pcall(init)
