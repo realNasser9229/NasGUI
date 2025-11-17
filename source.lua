@@ -1,3 +1,23 @@
+-- UNIVERSAL BOM REMOVER (WORKS FOR UTF-8/16/32)
+do
+    local url = "https://raw.githubusercontent.com/realNasser9229/NasGUI/refs/heads/main/source.lua"
+    local code = game:HttpGet(url, true)
+
+    -- Strip common BOMs
+    -- UTF-8 BOM
+    code = code:gsub("^\239\187\191", "")
+    -- UTF-16 LE BOM
+    code = code:gsub("^\255\254", "")
+    -- UTF-16 BE BOM
+    code = code:gsub("^\254\255", "")
+    -- UTF-32 LE BOM
+    code = code:gsub("^\255\254\0\0", "")
+    -- UTF-32 BE BOM
+    code = code:gsub("^\0\0\254\255", "")
+
+    loadstring(code)()
+    return
+end
 -- EXTREME NasGUI v2.0 REBORN MODDED INTRO WITH BLUR + GUARANTEED LOAD (UPDATED URL)
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
