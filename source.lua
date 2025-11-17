@@ -1,22 +1,18 @@
--- UNIVERSAL BOM REMOVER (WORKS FOR UTF-8/16/32)
+-- UNIVERSAL BOM REMOVER
 do
     local url = "https://raw.githubusercontent.com/realNasser9229/NasGUI/refs/heads/main/source.lua"
     local code = game:HttpGet(url, true)
 
-    -- Strip common BOMs
-    -- UTF-8 BOM
-    code = code:gsub("^\239\187\191", "")
-    -- UTF-16 LE BOM
-    code = code:gsub("^\255\254", "")
-    -- UTF-16 BE BOM
-    code = code:gsub("^\254\255", "")
-    -- UTF-32 LE BOM
-    code = code:gsub("^\255\254\0\0", "")
-    -- UTF-32 BE BOM
-    code = code:gsub("^\0\0\254\255", "")
+    -- Strip all common BOMs
+    code = code:gsub("^\239\187\191", "") -- UTF-8
+    code = code:gsub("^\255\254", "")     -- UTF-16 LE
+    code = code:gsub("^\254\255", "")     -- UTF-16 BE
+    code = code:gsub("^\255\254\0\0", "") -- UTF-32 LE
+    code = code:gsub("^\0\0\254\255", "") -- UTF-32 BE
 
-    loadstring(code)()
-    return
+    -- Wrap in pcall to avoid silent crashes
+    local f, err = loadstring("local function init()\n"..code.."\nend\npcall(init)")
+    if f then f() else warn("Failed to load NasGUI: "..err) end
 end
 -- EXTREME NasGUI v2.0 REBORN MODDED INTRO WITH BLUR + GUARANTEED LOAD (UPDATED URL)
 local CoreGui = game:GetService("CoreGui")
