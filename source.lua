@@ -14,6 +14,8 @@ do
     local f, err = loadstring("local function init()\n"..code.."\nend\npcall(init)")
     if f then f() else warn("Failed to load NasGUI: "..err) end
 end
+
+local function init
 -- EXTREME NasGUI v2.0 REBORN MODDED INTRO WITH BLUR + GUARANTEED LOAD (UPDATED URL)
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
@@ -1654,3 +1656,4 @@ yPos += 40
 miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollMisc.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y)
 end)
+pcall(init)
