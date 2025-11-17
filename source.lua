@@ -1,3 +1,21 @@
+-- FIX INVISIBLE UTF-8 BOM (Github adds these sometimes)
+do
+    -- If the file starts with the UTF-8 BOM byte, reload a clean version
+    if string.byte(string.sub(debug.getinfo(1).source, 1, 1)) == 239 then
+        local url = "https://raw.githubusercontent.com/realNasser9229/NasGUI/main/source.lua"
+
+        -- Download raw source
+        local src = game:HttpGet(url)
+
+        -- Remove UTF-8 BOM if present
+        src = src:gsub("^\239\187\191", "")
+
+        -- Reload script without BOM and stop the current one
+        loadstring(src)()
+        return
+    end
+end
+
 print(">> Nas9229alt's SUPER OP NasGUI V2.0 loaded successfully, GO REKT THEM NOW!!! (BY NAS / nas9229alt & JAN / 1602sasa2)")
 
 local function init()
