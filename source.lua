@@ -15,7 +15,7 @@ do
     if f then f() else warn("Failed to load NasGUI: "..err) end
 end
 
-local function init
+local function init()
 -- EXTREME NasGUI v2.0 REBORN MODDED INTRO WITH BLUR + GUARANTEED LOAD (UPDATED URL)
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
