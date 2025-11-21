@@ -490,9 +490,10 @@ end
 if type(Plugins) == "table" and #Plugins > 0 then
     for _, plugin in ipairs(Plugins) do
         print("Adding button for plugin:", plugin.Name)
-        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
+        local btn = AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
             task.spawn(plugin.Run)
         end)
+        print("Button created?", btn)  -- should print a TextButton instance
     end
 end
 
