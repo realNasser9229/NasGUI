@@ -149,84 +149,6 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 
--- ⭐ NASGUI PLUGIN SYSTEM ⭐
-
--- 1️⃣ Plugin folder + README
-local PluginFolder = "NasPlugins"
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-    writefile(PluginFolder.."/README.txt", [[
-NasGUI Plugins:
-
-- Each plugin should be a .nas file.
-- Must return a table with:
-    Name = "Plugin Name"
-    Author = "Author"
-    Run = function() ... end
-
-- Example:
-    return {
-        Name = "Test Plugin",
-        Author = "You",
-        Run = function()
-            print("Hello from plugin!")
-        end
-    }
-]])
-end
-
--- 2️⃣ Loader
-local function LoadPlugins()
-    local list = {}
-    for _, file in ipairs(listfiles(PluginFolder)) do
-        if file:sub(-4) == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-            end
-        end
-    end
-    return list
-end
-
-local Plugins = LoadPlugins() or {}
-
--- 3️⃣ Scroll frame inside Plugins container
-local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer) -- replace with your internal container
-scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
-scrollPlugins.BackgroundTransparency = 1
-scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginLayout.Padding = UDim.new(0, 10)
-pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
--- 4️⃣ Helper to add plugin buttons
-local function AddPlugin(pluginName, callback)
-    local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1, -20, 0, 40)
-    btn.Position = UDim2.new(0, 10, 0, 0)
-    btn.Text = pluginName
-    btn.TextSize = 14
-    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.ZIndex = 1
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
--- 5️⃣ Auto-generate plugin buttons
-if type(Plugins) == "table" and #Plugins > 0 then
-    for _, plugin in ipairs(Plugins) do
-        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
-            task.spawn(plugin.Run)
-        end)
-    end
-end
 
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
@@ -473,6 +395,88 @@ local function createButton(parent, text, y, callback)
     return btn
 end
 
+-- ⭐⭐ NasGUI Plugin System ⭐⭐
+-- Place this **after your Plugins container and tab button** (containerClientServer)  
+
+-- Create NasPlugins folder + README if missing
+local PluginFolder = "NasPlugins"
+if not isfolder(PluginFolder) then
+    makefolder(PluginFolder)
+    writefile(PluginFolder.."/README.txt", [[
+NasGUI Plugin Instructions:
+
+- Each plugin must be a Lua file ending with .nas
+- The file must return a table with:
+    Name = "Plugin Name"
+    Author = "YourName"
+    Run = function() ... end
+- Example minimal plugin:
+return {
+    Name = "Test Plugin",
+    Author = "You",
+    Run = function()
+        print("Hello from plugin!")
+    end
+}
+]])
+end
+
+-- Loader: reads all .nas plugins
+local function LoadPlugins()
+    local list = {}
+    for _, file in ipairs(listfiles(PluginFolder)) do
+        if file:sub(-4) == ".nas" then
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
+            if ok and type(plugin) == "table" and plugin.Run then
+                table.insert(list, plugin)
+            end
+        end
+    end
+    return list
+end
+
+local Plugins = LoadPlugins() or {}
+
+-- ScrollFrame inside the Plugins container
+local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
+scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
+scrollPlugins.BackgroundTransparency = 1
+scrollPlugins.ScrollBarThickness = 5
+scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102,0,0)
+
+local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginLayout.Padding = UDim.new(0,10)
+pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Helper to add plugin buttons
+local function AddPlugin(pluginName, callback)
+    local btn = Instance.new("TextButton", scrollPlugins)
+    btn.Size = UDim2.new(1,-20,0,40)
+    btn.Position = UDim2.new(0,10,0,0)
+    btn.Text = pluginName
+    btn.TextSize = 14
+    btn.BackgroundColor3 = Color3.fromRGB(128,0,0)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.Gotham
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Auto-generate buttons for each plugin
+if type(Plugins) == "table" and #Plugins > 0 then
+    for _, plugin in ipairs(Plugins) do
+        AddPlugin(
+            plugin.Name.." | by "..(plugin.Author or "Unknown"),
+            function()
+                task.spawn(plugin.Run)
+            end
+        )
+    end
+end
+
+-- Update CanvasSize to fit buttons
+scrollPlugins.CanvasSize = UDim2.new(0,0,0,pluginLayout.AbsoluteContentSize.Y + 10)
 
 -- Main Tab Buttons
 local buttons = {
