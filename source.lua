@@ -149,48 +149,6 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 
--- Plugin Folder Setup
-local PluginFolder = "NasPlugins"
-
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-end
-
--- README Generator
-local readmePath = PluginFolder .. "/README.txt"
-
-if not isfile(readmePath) then
-    writefile(readmePath, [[
-NASGUI PLUGIN SYSTEM - README
-
-How to Make a Plugin:
----------------------
-
-1. Create a new file inside the NasPlugins folder.
-2. Name it something like:
-       "MyFirstPlugin.nas"
-
-3. The plugin MUST return a table formatted like this:
-
-return {
-    Name = "Plugin Name",          -- Button text
-    Author = "YourName",           -- Optional
-    Run = function()               -- Code that runs when clicked
-        print("Plugin executed!")
-        -- your code here
-    end
-}
-
-4. After saving the .nas file, restart NasGUI and the plugin will appear in the Plugins tab automatically.
-
-Notes:
-- File extension MUST be .nas
-- Plugin.Run MUST be a function
-- You can use LoadString(), HttpGet(), or any executor functions inside "Run()"
-
-Enjoy breaching the environment after!
-    ]])
-end
 
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
@@ -357,28 +315,25 @@ containerMisc.Position = containerMain.Position
 containerMisc.BackgroundTransparency = 1
 containerMisc.Visible = false
 containerMisc.ZIndex = 1
-
--- Plugins Tab Container
-local containerPlugins = Instance.new("Frame", tabContent)
+-- Plugins Container
+local containerPlugins = Instance.new("Frame", mainContainer) -- parent is your main GUI frame
 containerPlugins.Size = UDim2.new(1, 0, 1, 0)
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 
+-- Scroll frame for plugin buttons
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
 scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
 scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
-scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollPlugins.CanvasSize = UDim2.new(0,0,0,0)
 
-local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginsLayout.Padding = UDim.new(0, 10)
-pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+-- Optional layout for spacing
+local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginLayout.Padding = UDim.new(0,10)
+pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto resize scrolling canvas
-pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 20)
-end)
 
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
@@ -394,30 +349,64 @@ local function createTabButton(name, pos, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
--- ⭐ AUTO GENERATE PLUGIN BUTTONS ⭐
-local PluginOffset = 0
+-- Loader
+local PluginFolder = "NasPlugins"
+if not isfolder(PluginFolder) then makefolder(PluginFolder) end
 
-for _, plugin in ipairs(Plugins) do
-    local btn = Instance.new("TextButton")
-    btn.Parent = scrollPlugins
-    btn.Size = UDim2.new(1, -20, 0, 40) -- full width, same style as main buttons
-    btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
-    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.ZIndex = 1
-    btn.Text = plugin.Name .. " | by " .. (plugin.Author or "Unknown")
-
-    btn.MouseButton1Click:Connect(function()
-        task.spawn(plugin.Run)
-    end)
-
-    PluginOffset = PluginOffset + 50  -- 40 height + 10 spacing
+-- README creation (optional)
+local readmePath = PluginFolder.."/README.txt"
+if not isfile(readmePath) then
+    writefile(readmePath,[[
+NASGUI PLUGIN SYSTEM - README
+...
+]])
 end
 
--- Update scroll size
-scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
+-- Load plugins function
+local function LoadPlugins()
+    local list = {}
+    if isfolder(PluginFolder) then
+        for _, file in ipairs(listfiles(PluginFolder)) do
+            if file:sub(-4) == ".nas" then
+                local ok, plugin = pcall(function()
+                    return loadfile(file)()
+                end)
+                if ok and type(plugin) == "table" and plugin.Run then
+                    table.insert(list, plugin)
+                end
+            end
+        end
+    end
+    return list
+end
+
+-- Assign Plugins table safely
+local Plugins = LoadPlugins() or {}
+local PluginOffset = 0
+
+function AddPlugin(pluginName, callback)
+    local btn = Instance.new("TextButton", scrollPlugins)
+    btn.Size = UDim2.new(1,-20,0,40)
+    btn.Position = UDim2.new(0,10,0,10+PluginOffset)
+    btn.Text = pluginName
+    btn.TextSize = 14
+    btn.Font = Enum.Font.Gotham
+    btn.BackgroundColor3 = Color3.fromRGB(128,0,0)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.ZIndex = 1
+    btn.MouseButton1Click:Connect(callback)
+
+    PluginOffset = PluginOffset + 50
+    scrollPlugins.CanvasSize = UDim2.new(0,0,0,PluginOffset+20)
+end
+
+if type(Plugins) == "table" and #Plugins > 0 then
+    for _, plugin in ipairs(Plugins) do
+        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
+            task.spawn(plugin.Run)
+        end)
+    end
+end
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
@@ -441,6 +430,7 @@ createTabButton("Plugins", 330, function()
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
+    containerClientServer.Visible = false
     containerPlugins.Visible = true
 end)
 
@@ -475,176 +465,6 @@ local function createButton(parent, text, y, callback)
     return btn
 end
 
--- =========================
--- PLUGIN SYSTEM FOR NASGUI
--- =========================
-
--- 1️⃣ Plugin Folder + README
-local PluginFolder = "NasPlugins"
-
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-end
-
--- Create README.txt if it doesn't exist
-local readmePath = PluginFolder .. "/README.txt"
-if not isfile(readmePath) then
-    writefile(readmePath, [[
-NASGUI PLUGIN SYSTEM - README
-
-How to Make a Plugin:
----------------------
-
-1. Create a new file inside the NasPlugins folder.
-2. Name it something like:
-       MyFirstPlugin.nas
-
-3. The plugin MUST return a table formatted like this:
-
-return {
-    Name = "Plugin Name",          -- Button text
-    Author = "YourName",           -- Optional
-    Run = function()               -- Code that runs when clicked
-        print("Plugin executed!")
-        -- your code here
-    end
-}
-
-4. After saving the .nas file, restart NasGUI and the plugin will appear in the Plugins tab automatically.
-
-Notes:
-- File extension MUST be .nas
-- Plugin.Run MUST be a function
-- You can use loadstring, httpget, or any executor functions inside Run()
-    ]])
-end
-
--- 2️⃣ Plugin Loader
-local Plugins = {}
-
-local function LoadPlugins()
-    local list = {}
-    for _, file in ipairs(listfiles(PluginFolder)) do
-        if file:sub(-4) == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-            end
-        end
-    end
-    return list
-end
-
-Plugins = LoadPlugins() or {}
-
--- 3️⃣ Plugins Tab Container
-
-local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
-scrollPlugins.BackgroundTransparency = 1
-scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
-scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
-
--- Manual offset system
-local PluginOffset = 0
-
--- =========================
--- NASGUI PLUGIN SYSTEM (FIXED)
--- =========================
-
--- 1️⃣ Plugin Folder + README
-local PluginFolder = "NasPlugins"
-
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-end
-
--- Create README.txt if it doesn't exist
-local readmePath = PluginFolder .. "/README.txt"
-if not isfile(readmePath) then
-    writefile(readmePath, [[
-NASGUI PLUGIN SYSTEM - README
-
-How to Make a Plugin:
----------------------
-
-1. Create a new file inside the NasPlugins folder.
-2. Name it something like:
-       MyFirstPlugin.nas
-
-3. The plugin MUST return a table formatted like this:
-
-return {
-    Name = "Plugin Name",          -- Button text
-    Author = "YourName",           -- Optional
-    Run = function()               -- Code that runs when clicked
-        print("Plugin executed!")
-        -- your code here
-    end
-}
-
-4. After saving the .nas file, restart NasGUI and the plugin will appear in the Plugins tab automatically.
-
-Notes:
-- File extension MUST be .nas
-- Plugin.Run MUST be a function
-- You can use loadstring, httpget, or any executor functions inside Run()
-    ]])
-end
-
--- 2️⃣ Plugin Loader (SAFE)
-local function LoadPlugins()
-    local list = {}
-    if isfolder(PluginFolder) then
-        for _, file in ipairs(listfiles(PluginFolder)) do
-            if file:sub(-4) == ".nas" then
-                local ok, plugin = pcall(function()
-                    return loadfile(file)()
-                end)
-                if ok and type(plugin) == "table" and plugin.Run then
-                    table.insert(list, plugin)
-                end
-            end
-        end
-    end
-    return list
-end
-
--- Always a proper table
-local Plugins = LoadPlugins() or {}
-
--- 3️⃣ Plugin Button Offset
-local PluginOffset = 0
-
--- 4️⃣ Function to add a plugin button
-function AddPlugin(pluginName, callback)
-    local btn = Instance.new("TextButton", scrollPlugins) -- uses existing scrollPlugins
-    btn.Size = UDim2.new(1, -20, 0, 40)
-    btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
-    btn.Text = pluginName
-    btn.TextSize = 14
-    btn.Font = Enum.Font.Gotham
-    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.ZIndex = 1
-    btn.MouseButton1Click:Connect(callback)
-
-    PluginOffset = PluginOffset + 50 -- height + spacing
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
-    return btn
-end
-
--- 6️⃣ Auto-generate plugin buttons (SAFE)
-if type(Plugins) == "table" and #Plugins > 0 then
-    for _, plugin in ipairs(Plugins) do
-        AddPlugin(plugin.Name .. " | by " .. (plugin.Author or "Unknown"), function()
-            task.spawn(plugin.Run)
-        end)
-    end
-end
 
 -- Main Tab Buttons
 local buttons = {
