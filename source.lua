@@ -411,72 +411,122 @@ local function createButton(parent, text, y, callback)
     return btn
 end
 
--- ⭐⭐ NasGUI Plugin System ⭐⭐
--- Place this **after your Plugins container and tab button** (containerClientServer)  
+-- =========================
+-- 📦 NasGUI Plugin System
+-- =========================
 
--- Create NasPlugins folder + README if missing
-local PluginFolder = "NasPlugins"
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-    writefile(PluginFolder.."/README.txt", [[
-NasGUI Plugin Instructions:
+-- 1️⃣ Create Plugins container
+local containerPlugins = Instance.new("Frame", mainFrame)
+containerPlugins.Size = UDim2.new(1, 0, 1, 0)
+containerPlugins.BackgroundTransparency = 1
+containerPlugins.Visible = false
+containerPlugins.ZIndex = 1
 
-- Each plugin must be a Lua file ending with .nas
-- The file must return a table with:
-    Name = "Plugin Name"
-    Author = "YourName"
-    Run = function() ... end
-- Example minimal plugin:
-return {
-    Name = "Test Plugin",
-    Author = "You",
-    Run = function()
-        print("Hello from plugin!")
-    end
-}
-]])
-end
-
--- Loader: reads all .nas plugins
-local function LoadPlugins()
-    local list = {}
-for _, file in ipairs(listfiles("NasPlugins")) do
-    -- Only process .nas files
-    if file:sub(-4):lower() == ".nas" then
-        print("Found plugin:", file)
-        local ok, plugin = pcall(function()
-            return loadfile(file)()
-        end)
-        print(ok, plugin)
-
-        if ok and type(plugin) == "table" and plugin.Run then
-            table.insert(list, plugin)
-        end
-    else
-        print("Skipping non-plugin file:", file)
-    end
-end
-	
-    return list
-end
-
-local Plugins = LoadPlugins() or {}
-
--- ScrollFrame inside the Plugins container
-local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
+-- 2️⃣ Create scrolling list for plugin buttons
+local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
 scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102,0,0)
+scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollPlugins.ZIndex = 1
 
-local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginLayout.Padding = UDim.new(0,10)
-pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
+local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginsLayout.Padding = UDim.new(0, 10)
+pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Helper to add plugin buttons
-local function AddPlugin(pluginName, callback)
-    local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1,-20,0,40)
+-- Auto-resize scrolling area
+pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- 3️⃣ Add actual Plugins tab button
+createTabButton("Plugins", 330, function()
+    containerMain.Visible = false
+    containerExec.Visible = false
+    containerMisc.Visible = false
+    containerClientServer.Visible = false
+    containerPlugins.Visible = true
+end)
+
+-- 4️⃣ Button creator for plugins
+local function AddPlugin(name, callback)
+    print("AddPlugin called for:", name)
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = scrollPlugins
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.Gotham
+    btn.Text = name
+    btn.ZIndex = 1
+
+    btn.MouseButton1Click:Connect(function()
+        print("Running plugin:", name)
+        callback()
+    end)
+
+    print("Button created:", btn)
+    return btn
+end
+
+-- 5️⃣ Plugin loader
+local function LoadPlugins()
+    print("Loading plugins...")
+
+    local list = {}
+
+    if not isfolder("NasPlugins") then
+        makefolder("NasPlugins")
+        writefile("NasPlugins/README.txt",
+            "Put your .nas plugin files here.\n" ..
+            "Plugin format:\n" ..
+            "return {\n" ..
+            "    Name = \"Plugin Name\",\n" ..
+            "    Author = \"You\",\n" ..
+            "    Run = function()\n" ..
+            "        -- code\n" ..
+            "    end\n" ..
+            "}")
+    end
+
+    for _, file in ipairs(listfiles("NasPlugins")) do
+        if file:sub(-4):lower() == ".nas" then
+            print("Found plugin file:", file)
+
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
+
+            if ok and type(plugin) == "table" and plugin.Run then
+                print("Valid plugin loaded:", plugin.Name)
+                table.insert(list, plugin)
+            else
+                warn("Invalid plugin:", file, ok, plugin)
+            end
+        else
+            print("Skipping non-plugin file:", file)
+        end
+    end
+
+    return list
+end
+
+-- 6️⃣ Load and create plugin buttons
+local Plugins = LoadPlugins()
+
+if #Plugins > 0 then
+    print("Generating plugin buttons... Total:", #Plugins)
+
+    for _, plugin in ipairs(Plugins) do
+        AddPlugin(plugin.Name .. " | by " .. (plugin.Author or "Unknown"), function()
+            task.spawn(plugin.Run)
+        end)
+    end
+else
+    print("No plugins found.")
+end
 
 -- Main Tab Buttons
 local buttons = {
