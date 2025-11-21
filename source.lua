@@ -411,21 +411,25 @@ local function createButton(parent, text, y, callback)
     return btn
 end
 
+
 -- =========================
--- 📦 NasGUI Plugin System
+-- PLUGIN SYSTEM FOR NasGUI
 -- =========================
 
--- 1️⃣ Create Plugins container
+-- 1️⃣ Plugins Container (matches other tab containers)
 local containerPlugins = Instance.new("Frame", mainFrame)
-containerPlugins.Size = UDim2.new(1, 0, 1, 0)
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
--- 2️⃣ Create scrolling list for plugin buttons
+-- Prevent overlap with top drag bar (~50px)
+containerPlugins.Size = UDim2.new(1, 0, 1, -50)
+containerPlugins.Position = UDim2.new(0, 0, 0, 50)
+
+-- 2️⃣ ScrollingFrame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20)
 scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -20)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -435,12 +439,12 @@ local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
 pluginsLayout.Padding = UDim.new(0, 10)
 pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto-resize scrolling area
+-- Auto-adjust canvas size when buttons are added
 pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 20)
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- 3️⃣ Add actual Plugins tab button
+-- 3️⃣ Add the Plugins tab button
 createTabButton("Plugins", 330, function()
     containerMain.Visible = false
     containerExec.Visible = false
@@ -449,123 +453,59 @@ createTabButton("Plugins", 330, function()
     containerPlugins.Visible = true
 end)
 
--- 4️⃣ Button creator for plugins
+-- 4️⃣ Helper to create plugin buttons
 local function AddPlugin(name, callback)
-    print("AddPlugin called for:", name)
-
-    local btn = Instance.new("TextButton")
-    btn.Parent = scrollPlugins
+    local btn = Instance.new("TextButton", scrollPlugins)
     btn.Size = UDim2.new(1, -20, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 14
-    btn.Font = Enum.Font.Gotham
     btn.Text = name
+    btn.TextSize = 14
+    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
     btn.ZIndex = 1
-
-    btn.MouseButton1Click:Connect(function()
-        print("Running plugin:", name)
-        callback()
-    end)
-
-    print("Button created:", btn)
+    btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 5️⃣ Plugin loader
+-- 5️⃣ Loader to get all .nas plugins
 local function LoadPlugins()
-    print("Loading plugins...")
-
     local list = {}
 
     if not isfolder("NasPlugins") then
         makefolder("NasPlugins")
-        writefile("NasPlugins/README.txt",
-            "Put your .nas plugin files here.\n" ..
---==[ NASGUI PLUGIN SYSTEM ]==--
-
-local HttpService = game:GetService("HttpService")
-
--- IMPORTANT:
--- Set this to the Frame where plugin buttons should appear.
--- Example: Tabs.PluginTab.ButtonHolder
--- UPDATE THIS TO YOUR REAL PATH ↓↓↓
-local PluginContainer = NasGUI:WaitForChild("Tabs"):WaitForChild("Plugins"):WaitForChild("Buttons")
-
-if not PluginContainer then
-    warn("NASGUI Plugin System: PluginContainer NOT FOUND")
-    return
-end
-
-print("[NASGUI] Plugin System Initialized.")
-
-local function SafeCreateButton(name)
-    local b = Instance.new("TextButton")
-    b.Name = name
-    b.Size = UDim2.new(1, 0, 0, 28)
-    b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 18
-    b.Text = name
-    b.Parent = PluginContainer
-    return b
-end
-
-local function LoadPlugin(path)
-    local success, data = pcall(function()
-        return loadfile(path)()
-    end)
-
-    if not success then
-        warn("[NASGUI] Failed to load plugin:", path, data)
-        return
+        -- Optional README
+        writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
     end
 
-    if type(data) ~= "table" then
-        warn("[NASGUI] Invalid plugin format:", path)
-        return
-    end
-
-    if not data.Name or not data.Run then
-        warn("[NASGUI] Bad plugin table:", path)
-        return
-    end
-
-    local button = SafeCreateButton(data.Name)
-
-    button.MouseButton1Click:Connect(function()
-        print("[NASGUI] Running plugin:", data.Name)
-        pcall(data.Run)
-    end)
-
-    print("[NASGUI] Plugin loaded:", data.Name)
-end
-
-local function ScanPlugins()
-    print("[NASGUI] Scanning NasPlugins folder...")
-
-    local pluginFolder = "NasPlugins"
-    local files = listfiles(pluginFolder)
-
-    if not files then
-        warn("[NASGUI] No NasPlugins folder found.")
-        return
-    end
-
-    for _, file in ipairs(files) do
-        if file:match("%.nas$") then
-            print("[NASGUI] Found plugin:", file)
-            LoadPlugin(file)
+    for _, file in ipairs(listfiles("NasPlugins")) do
+        if file:sub(-4):lower() == ".nas" then
+            print("Found plugin:", file)
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
+            print(ok, plugin)
+            if ok and type(plugin) == "table" and plugin.Run then
+                table.insert(list, plugin)
+            end
         else
-            print("[NASGUI] Skipping non-plugin:", file)
+            print("Skipping non-plugin file:", file)
         end
     end
 
-    print("[NASGUI] Plugin scan complete.")
+    return list
 end
 
-ScanPlugins()
+-- 6️⃣ Load plugins and auto-generate buttons
+local Plugins = LoadPlugins() or {}
+
+if type(Plugins) == "table" and #Plugins > 0 then
+    for _, plugin in ipairs(Plugins) do
+        print("Adding button for plugin:", plugin.Name)
+        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
+            task.spawn(plugin.Run)
+        end)
+    end
+end
 
 -- Main Tab Buttons
 local buttons = {
