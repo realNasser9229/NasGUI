@@ -484,28 +484,7 @@ local function LoadPlugins()
                 return loadfile(file)()
             end)
             print(ok, plugin)
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-            end
-        else
-            print("Skipping non-plugin file:", file)
-        end
-    end
 
-    return list
-end
-
--- 6️⃣ Load plugins and auto-generate buttons
-local Plugins = LoadPlugins() or {}
-
-if type(Plugins) == "table" and #Plugins > 0 then
-    for _, plugin in ipairs(Plugins) do
-        print("Adding button for plugin:", plugin.Name)
-        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
-            task.spawn(plugin.Run)
-        end)
-    end
-end
 
 -- Main Tab Buttons
 local buttons = {
