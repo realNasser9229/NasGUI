@@ -418,16 +418,16 @@ end
 
 -- 1️⃣ Create Plugins container
 local containerPlugins = Instance.new("Frame", mainFrame)
-containerPlugins.Size = UDim2.new(1, 0, 1, 0)       -- full size of mainFrame
-containerPlugins.Position = UDim2.new(0, 0, 0, 0)
+containerPlugins.Size = UDim2.new(1, 0, 1, -60)       -- leave space for tab buttons
+containerPlugins.Position = UDim2.new(0, 0, 0, 60)    -- starts just below tab buttons
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
--- 2️⃣ Create scrolling frame inside Plugins container (fits nicely below tab buttons)
+-- 2️⃣ Create scrolling frame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -70)      -- leave bottom padding
-scrollPlugins.Position = UDim2.new(0, 10, 0, 60)    -- offset below tab buttons
+scrollPlugins.Size = UDim2.new(1, -20, 1, 0)  -- fill the container
+scrollPlugins.Position = UDim2.new(0, 10, 0, 0)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
