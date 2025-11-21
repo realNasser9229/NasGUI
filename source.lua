@@ -138,7 +138,7 @@ task.wait(0.01)
 print("PRE-/POST-RELEASE TESTER: @fotis19902 (Fotis)")
 task.wait(3)
 local success, err = pcall(function()
-    warn("NOTICE! This is the OFFICIAL release of 'NasGUI v2.3 Reborn MODDED'. This means you have got the legit and verified version from either NasGUI's Discord server (NasGUI; Ready To Breach The Environment!), or from OUR servers (VOID) & (JanGUI). If there are copies from sketchy or/and unsafe websites, or it is released on different unofficial Discord servers, then they are either malware, skidded, pampered with the functions and is defaced. Including this error() message being deleted or changed. And that is 100% a red-flag, avoid using these copies!")
+    warn("NOTICE! This is the OFFICIAL release of 'NasGUI v2.3 Reborn MODDED'. This means you have got the legit and verified version from either NasGUI's Discord server (NasGUI; Ready To Breach The Environment!), or from OUR servers (VOID) & (JanGUI). If there are copies from sketchy or/and unsafe websites, or it is released on different unofficial Discord servers, then they are either malware, skidded, pampered with the functions and is defaced. Including this warn() message being deleted or changed. And that is 100% a red-flag, avoid using these copies!")
 end)
 
 
@@ -375,6 +375,10 @@ scrollPlugins.ZIndex = 1
 local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
 pluginsLayout.Padding = UDim.new(0, 10)
 pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+-- Auto-adjust canvas size whenever buttons are added
+pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
+end)
 
 
 -- Main Tab ScrollingFrame
@@ -485,12 +489,10 @@ end
 -- Auto-generate buttons for each plugin
 if type(Plugins) == "table" and #Plugins > 0 then
     for _, plugin in ipairs(Plugins) do
-        AddPlugin(
-            plugin.Name.." | by "..(plugin.Author or "Unknown"),
-            function()
-                task.spawn(plugin.Run)
-            end
-        )
+        print("Adding button for plugin:", plugin.Name)
+        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
+            task.spawn(plugin.Run)
+        end)
     end
 end
 
