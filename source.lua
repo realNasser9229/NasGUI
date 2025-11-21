@@ -338,24 +338,30 @@ local function createTabButton(name, pos, callback)
 end
 
 
+local function HidePluginsContainer()
+
+-- Wrap your existing tab button functions
 createTabButton("Main", 0, function()
+    HidePluginsContainer()
     containerMain.Visible = true
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = false
 end)
+
 createTabButton("Executor", 110, function()
+    HidePluginsContainer()
     containerMain.Visible = false
     containerExec.Visible = true
     containerMisc.Visible = false
-    containerClientServer.Visible = false
 end)
+
 createTabButton("Miscellaneous", 220, function()
+    HidePluginsContainer()
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = true
-    containerClientServer.Visible = false
 end)
+
 createTabButton("Plugins", 330, function()
     containerMain.Visible = false
     containerExec.Visible = false
