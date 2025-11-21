@@ -348,10 +348,39 @@ local function createTabButton(name, pos, callback)
     b.ZIndex = 1
     b.MouseButton1Click:Connect(callback)
 
-	-- 1️⃣ Loader
+-- ==========================
+-- ⭐ NasGUI Plugin System ⭐
+-- ==========================
+
+-- 1️⃣ Plugin folder creation (safe)
+local PluginFolder = "NasPlugins"
+pcall(function()
+    if isfolder and not isfolder(PluginFolder) then
+        makefolder(PluginFolder)
+        if writefile then
+            writefile(PluginFolder.."/README.txt", [[
+NasGUI Plugin Instructions:
+
+1. Each plugin must be a .nas file in this folder.
+2. Each plugin must return a table with Name, Author, and Run function:
+
+return {
+    Name = "Plugin Name",
+    Author = "YourName",
+    Run = function()
+        print("Plugin executed!")
+    end
+}
+
+]])
+        end
+    end
+end)
+
+-- 2️⃣ Loader function (safe)
 local function LoadPlugins()
     local list = {}
-    local ok, files = pcall(listfiles, "NasPlugins")
+    local ok, files = pcall(listfiles, PluginFolder)
     files = files or {}
     for _, file in ipairs(files) do
         if file:sub(-4) == ".nas" then
@@ -366,14 +395,17 @@ local function LoadPlugins()
     return list
 end
 
+-- 3️⃣ Load plugins safely
 local Plugins = {}
 pcall(function()
     Plugins = LoadPlugins() or {}
 end)
-	
-	local PluginOffset = 0
+print("[NasGUI] Loaded plugins:", #Plugins)
+
+-- 4️⃣ AddPlugin helper + offset
+local PluginOffset = 0
 function AddPlugin(name, callback)
-    local btn = Instance.new("TextButton", scrollPlugins)
+    local btn = Instance.new("TextButton", scrollPlugins) -- scrollPlugins = your Plugins tab ScrollingFrame
     btn.Size = UDim2.new(1, -20, 0, 40)
     btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
     btn.Text = name
@@ -384,14 +416,30 @@ function AddPlugin(name, callback)
     btn.MouseButton1Click:Connect(callback)
     PluginOffset = PluginOffset + 50
     scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
-	end
-	if type(Plugins) == "table" and #Plugins > 0 then
+end
+
+-- 5️⃣ Auto-generate buttons from loaded plugins
+if type(Plugins) == "table" and #Plugins > 0 then
     for _, plugin in ipairs(Plugins) do
         AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
             task.spawn(plugin.Run)
         end)
     end
-	end
+end
+
+-- 6️⃣ Example plugin (optional, for testing)
+-- Save this as NasPlugins/TestPlugin.nas to test
+--[[
+return {
+    Name = "Test Plugin",
+    Author = "Nas9229alt",
+    Run = function()
+        print("Test Plugin executed!")
+    end
+}
+]]
+
+-- ✅ Done — plugin system is ready
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
