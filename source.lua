@@ -424,7 +424,8 @@ containerPlugins.ZIndex = 1
 
 -- 2️⃣ Create scrolling list for plugin buttons
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -20)
+scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
