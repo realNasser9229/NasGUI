@@ -482,52 +482,90 @@ local function LoadPlugins()
         makefolder("NasPlugins")
         writefile("NasPlugins/README.txt",
             "Put your .nas plugin files here.\n" ..
-            "Plugin format:\n" ..
-            "return {\n" ..
-            "    Name = \"Plugin Name\",\n" ..
-            "    Author = \"You\",\n" ..
-            "    Run = function()\n" ..
-            "        -- code\n" ..
-            "    end\n" ..
-            "}")
+--==[ NASGUI PLUGIN SYSTEM ]==--
+
+local HttpService = game:GetService("HttpService")
+
+-- IMPORTANT:
+-- Set this to the Frame where plugin buttons should appear.
+-- Example: Tabs.PluginTab.ButtonHolder
+-- UPDATE THIS TO YOUR REAL PATH ↓↓↓
+local PluginContainer = NasGUI:WaitForChild("Tabs"):WaitForChild("Plugins"):WaitForChild("Buttons")
+
+if not PluginContainer then
+    warn("NASGUI Plugin System: PluginContainer NOT FOUND")
+    return
+end
+
+print("[NASGUI] Plugin System Initialized.")
+
+local function SafeCreateButton(name)
+    local b = Instance.new("TextButton")
+    b.Name = name
+    b.Size = UDim2.new(1, 0, 0, 28)
+    b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    b.TextColor3 = Color3.fromRGB(255, 255, 255)
+    b.Font = Enum.Font.SourceSansBold
+    b.TextSize = 18
+    b.Text = name
+    b.Parent = PluginContainer
+    return b
+end
+
+local function LoadPlugin(path)
+    local success, data = pcall(function()
+        return loadfile(path)()
+    end)
+
+    if not success then
+        warn("[NASGUI] Failed to load plugin:", path, data)
+        return
     end
 
-    for _, file in ipairs(listfiles("NasPlugins")) do
-        if file:sub(-4):lower() == ".nas" then
-            print("Found plugin file:", file)
+    if type(data) ~= "table" then
+        warn("[NASGUI] Invalid plugin format:", path)
+        return
+    end
 
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
+    if not data.Name or not data.Run then
+        warn("[NASGUI] Bad plugin table:", path)
+        return
+    end
 
-            if ok and type(plugin) == "table" and plugin.Run then
-                print("Valid plugin loaded:", plugin.Name)
-                table.insert(list, plugin)
-            else
-                warn("Invalid plugin:", file, ok, plugin)
-            end
+    local button = SafeCreateButton(data.Name)
+
+    button.MouseButton1Click:Connect(function()
+        print("[NASGUI] Running plugin:", data.Name)
+        pcall(data.Run)
+    end)
+
+    print("[NASGUI] Plugin loaded:", data.Name)
+end
+
+local function ScanPlugins()
+    print("[NASGUI] Scanning NasPlugins folder...")
+
+    local pluginFolder = "NasPlugins"
+    local files = listfiles(pluginFolder)
+
+    if not files then
+        warn("[NASGUI] No NasPlugins folder found.")
+        return
+    end
+
+    for _, file in ipairs(files) do
+        if file:match("%.nas$") then
+            print("[NASGUI] Found plugin:", file)
+            LoadPlugin(file)
         else
-            print("Skipping non-plugin file:", file)
+            print("[NASGUI] Skipping non-plugin:", file)
         end
     end
 
-    return list
+    print("[NASGUI] Plugin scan complete.")
 end
 
--- 6️⃣ Load and create plugin buttons
-local Plugins = LoadPlugins()
-
-if #Plugins > 0 then
-    print("Generating plugin buttons... Total:", #Plugins)
-
-    for _, plugin in ipairs(Plugins) do
-        AddPlugin(plugin.Name .. " | by " .. (plugin.Author or "Unknown"), function()
-            task.spawn(plugin.Run)
-        end)
-    end
-else
-    print("No plugins found.")
-end
+ScanPlugins()
 
 -- Main Tab Buttons
 local buttons = {
