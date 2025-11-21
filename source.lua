@@ -206,7 +206,7 @@ mainFrame.Draggable = true
 -- Cozy Background Image (replace with your preferred cozy image ID)
 local bgImage = Instance.new("ImageLabel", mainFrame)
 bgImage.Size = UDim2.new(1, 0, 1, 0)
-bgImage.BackgroundTransparency = 1
+bgImage.BackgroundTransparency = 0
 bgImage.Image = "rbxassetid://82411403129832" -- Cozy red/black abstract vibe
 bgImage.ImageTransparency = 0.3
 bgImage.ZIndex = 0
@@ -347,66 +347,55 @@ local function createTabButton(name, pos, callback)
     b.TextSize = 14
     b.ZIndex = 1
     b.MouseButton1Click:Connect(callback)
+
+	-- Ensure plugins folder exists
+local PluginFolder = "NasPlugins"
+if not isfolder(PluginFolder) then
+    makefolder(PluginFolder)
+    -- Optional README
+    writefile(PluginFolder.."/README.txt", "Place .nas plugin files here.\nEach plugin must return a table:\n{\n  Name = 'Plugin Name',\n  Author = 'YourName',\n  Run = function() end\n}")
 end
 
 -- Loader
-local PluginFolder = "NasPlugins"
-if not isfolder(PluginFolder) then makefolder(PluginFolder) end
-
--- README creation (optional)
-local readmePath = PluginFolder.."/README.txt"
-if not isfile(readmePath) then
-    writefile(readmePath,[[
-NASGUI PLUGIN SYSTEM - README
-...
-]])
-end
-
--- Load plugins function
 local function LoadPlugins()
     local list = {}
-    if isfolder(PluginFolder) then
-        for _, file in ipairs(listfiles(PluginFolder)) do
-            if file:sub(-4) == ".nas" then
-                local ok, plugin = pcall(function()
-                    return loadfile(file)()
-                end)
-                if ok and type(plugin) == "table" and plugin.Run then
-                    table.insert(list, plugin)
-                end
+    for _, file in ipairs(listfiles(PluginFolder)) do
+        if file:sub(-4) == ".nas" then
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
+            if ok and type(plugin) == "table" and plugin.Run then
+                table.insert(list, plugin)
             end
         end
     end
     return list
 end
 
--- Assign Plugins table safely
 local Plugins = LoadPlugins() or {}
-local PluginOffset = 0
 
-function AddPlugin(pluginName, callback)
+	local PluginOffset = 0
+function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1,-20,0,40)
-    btn.Position = UDim2.new(0,10,0,10+PluginOffset)
-    btn.Text = pluginName
-    btn.TextSize = 14
-    btn.Font = Enum.Font.Gotham
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
+    btn.Text = name
     btn.BackgroundColor3 = Color3.fromRGB(128,0,0)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.ZIndex = 1
+    btn.TextSize = 14
+    btn.Font = Enum.Font.Gotham
     btn.MouseButton1Click:Connect(callback)
-
     PluginOffset = PluginOffset + 50
-    scrollPlugins.CanvasSize = UDim2.new(0,0,0,PluginOffset+20)
-end
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
+	end
 
-if type(Plugins) == "table" and #Plugins > 0 then
+	if type(Plugins) == "table" and #Plugins > 0 then
     for _, plugin in ipairs(Plugins) do
         AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
             task.spawn(plugin.Run)
         end)
     end
-end
+	end
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
