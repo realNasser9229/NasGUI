@@ -416,17 +416,17 @@ end
 -- PLUGIN SYSTEM FOR NasGUI
 -- =========================
 
--- 1️⃣ Create a proper Plugins container (same size as other tab containers)
-local containerPlugins = Instance.new("Frame", mainFrame) -- mainFrame = your NasGUI main container
-containerPlugins.Size = UDim2.new(1, 0, 1, 0)
-containerPlugins.Position = UDim2.new(0, 0, 0, 0)
+-- 1️⃣ Create Plugins container (matches other tab containers, below tab buttons)
+local containerPlugins = Instance.new("Frame", mainFrame)
+containerPlugins.Size = UDim2.new(1, 0, 1, -40) -- leave space for tab buttons
+containerPlugins.Position = UDim2.new(0, 0, 0, 40) -- below tab buttons
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
 -- 2️⃣ Scroll frame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- slight padding
+scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- inner padding
 scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
@@ -443,14 +443,16 @@ end)
 
 -- 3️⃣ Add Plugins tab button
 createTabButton("Plugins", 330, function()
+    -- hide all other tab containers
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = false -- hide old container if still used
+    containerClientServer.Visible = false
+    -- show plugins
     containerPlugins.Visible = true
 end)
 
--- 4️⃣ Helper to add plugin buttons
+-- 4️⃣ Helper to create plugin buttons
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
     btn.Size = UDim2.new(1, 0, 0, 40)
@@ -508,6 +510,7 @@ if type(Plugins) == "table" and #Plugins > 0 then
         end)
     end
 end
+
 
 
 
