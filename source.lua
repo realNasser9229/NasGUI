@@ -436,16 +436,23 @@ end
 -- Loader: reads all .nas plugins
 local function LoadPlugins()
     local list = {}
-    for _, file in ipairs(listfiles(PluginFolder)) do
-        if file:sub(-4) == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-            end
+for _, file in ipairs(listfiles("NasPlugins")) do
+    -- Only process .nas files
+    if file:sub(-4):lower() == ".nas" then
+        print("Found plugin:", file)
+        local ok, plugin = pcall(function()
+            return loadfile(file)()
+        end)
+        print(ok, plugin)
+
+        if ok and type(plugin) == "table" and plugin.Run then
+            table.insert(list, plugin)
         end
+    else
+        print("Skipping non-plugin file:", file)
     end
+end
+	
     return list
 end
 
