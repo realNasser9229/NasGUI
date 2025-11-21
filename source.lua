@@ -149,32 +149,48 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 
--- Create plugin folder
+-- Plugin Folder Setup
 local PluginFolder = "NasPlugins"
+
 if not isfolder(PluginFolder) then
     makefolder(PluginFolder)
 end
 
--- Loader
-local function LoadPlugins()
-    local list = {}
+-- README Generator
+local readmePath = PluginFolder .. "/README.txt"
 
-    for _, file in ipairs(listfiles(PluginFolder)) do
-        if file:sub(-4) == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
+if not isfile(readmePath) then
+    writefile(readmePath, [[
+NASGUI PLUGIN SYSTEM - README
 
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-            end
-        end
+How to Make a Plugin:
+---------------------
+
+1. Create a new file inside the NasPlugins folder.
+2. Name it something like:
+       "MyFirstPlugin.nas"
+
+3. The plugin MUST return a table formatted like this:
+
+return {
+    Name = "Plugin Name",          -- Button text
+    Author = "YourName",           -- Optional
+    Run = function()               -- Code that runs when clicked
+        print("Plugin executed!")
+        -- your code here
     end
+}
 
-    return list
+4. After saving the .nas file, restart NasGUI and the plugin will appear in the Plugins tab automatically.
+
+Notes:
+- File extension MUST be .nas
+- Plugin.Run MUST be a function
+- You can use LoadString(), HttpGet(), or any executor functions inside "Run()"
+
+Enjoy breaching the environment after!
+    ]])
 end
-
-local Plugins = LoadPlugins()
 
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
@@ -342,6 +358,27 @@ containerMisc.BackgroundTransparency = 1
 containerMisc.Visible = false
 containerMisc.ZIndex = 1
 
+-- Plugins Tab Container
+local containerPlugins = Instance.new("Frame", tabContent)
+containerPlugins.Size = UDim2.new(1, 0, 1, 0)
+containerPlugins.BackgroundTransparency = 1
+containerPlugins.Visible = false
+
+local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
+scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
+scrollPlugins.BackgroundTransparency = 1
+scrollPlugins.ScrollBarThickness = 5
+scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
+scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginsLayout.Padding = UDim.new(0, 10)
+pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Auto resize scrolling canvas
+pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 20)
+end)
 
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
@@ -362,38 +399,49 @@ local PluginOffset = 0
 
 for _, plugin in ipairs(Plugins) do
     local btn = Instance.new("TextButton")
-    btn.Parent = MainTab
-    btn.Size = UDim2.new(0, 200, 0, 35)
+    btn.Parent = scrollPlugins
+    btn.Size = UDim2.new(1, -20, 0, 40) -- full width, same style as main buttons
     btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextScaled = true
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.ZIndex = 1
     btn.Text = plugin.Name .. " | by " .. (plugin.Author or "Unknown")
 
     btn.MouseButton1Click:Connect(function()
         task.spawn(plugin.Run)
     end)
 
-    PluginOffset = PluginOffset + 40
+    PluginOffset = PluginOffset + 50  -- 40 height + 10 spacing
 end
+
+-- Update scroll size
+scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = false
+    containerPlugins.Visible = false
 end)
 createTabButton("Executor", 110, function()
     containerMain.Visible = false
     containerExec.Visible = true
     containerMisc.Visible = false
-    containerClientServer.Visible = false
+    containerPlugins.Visible = false
 end)
 createTabButton("Miscellaneous", 220, function()
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = true
-    containerClientServer.Visible = false
+    containerPlugins.Visible = false
+end)
+createTabButton("Plugins", 330, function()
+    containerMain.Visible = false
+    containerExec.Visible = false
+    containerMisc.Visible = false
+    containerPlugins.Visible = true
 end)
 
 
@@ -427,6 +475,19 @@ local function createButton(parent, text, y, callback)
     return btn
 end
 
+function AddPlugin(pluginName, callback)
+    local btn = Instance.new("TextButton", scrollPlugins)
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, 0)
+    btn.Text = pluginName
+    btn.TextSize = 14
+    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.ZIndex = 1
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
 
 -- Main Tab Buttons
 local buttons = {
