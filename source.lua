@@ -291,7 +291,6 @@ tabFrame.Position = UDim2.new(0, 10, 0, 40)
 tabFrame.BackgroundTransparency = 1
 tabFrame.ZIndex = 1
 
-
 -- Containers for Tabs
 local containerMain = Instance.new("Frame", mainFrame)
 containerMain.Size = UDim2.new(1, -20, 1, -90)
