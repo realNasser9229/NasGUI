@@ -413,49 +413,49 @@ end
 
 
 -- =========================
--- PLUGIN SYSTEM FOR NasGUI
+-- PLUGIN SYSTEM FOR NasGUI v2.3
 -- =========================
 
--- 1️⃣ Create Plugins container (matches other tab containers, below tab buttons)
+-- 1️⃣ Create Plugins container
 local containerPlugins = Instance.new("Frame", mainFrame)
-containerPlugins.Size = UDim2.new(1, 0, 1, -40) -- leave space for tab buttons
-containerPlugins.Position = UDim2.new(0, 0, 0, 40) -- below tab buttons
+containerPlugins.Size = UDim2.new(1, 0, 1, 0)       -- full size of mainFrame
+containerPlugins.Position = UDim2.new(0, 0, 0, 0)
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
--- 2️⃣ Scroll frame inside Plugins container
+-- 2️⃣ Create scrolling frame inside Plugins container (fits nicely below tab buttons)
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- inner padding
-scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -70)      -- leave bottom padding
+scrollPlugins.Position = UDim2.new(0, 10, 0, 60)    -- offset below tab buttons
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollPlugins.ZIndex = 2
 
+-- UIListLayout for plugin buttons
 local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
 pluginLayout.Padding = UDim.new(0, 10)
 pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto-adjust canvas size whenever buttons are added
+-- Auto-adjust canvas size when buttons are added
 pluginLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- 3️⃣ Add Plugins tab button
+-- 3️⃣ Add the Plugins tab button
 createTabButton("Plugins", 330, function()
-    -- hide all other tab containers
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
     containerClientServer.Visible = false
-    -- show plugins
     containerPlugins.Visible = true
 end)
 
 -- 4️⃣ Helper to create plugin buttons
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Size = UDim2.new(1, -20, 0, 40)
     btn.Text = name
     btn.TextSize = 14
     btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
@@ -469,28 +469,17 @@ end
 -- 5️⃣ Loader to read all .nas plugins
 local function LoadPlugins()
     local list = {}
-    local PluginFolder = "NasPlugins"
 
-    if not isfolder(PluginFolder) then
-        makefolder(PluginFolder)
-        writefile(PluginFolder.."/README.txt", [[
-NasGUI Plugins:
-- Each plugin should be a .nas file.
-- Must return a table with: Name, Author, Run() function
-Example:
-return {
-    Name = "Test Plugin",
-    Author = "You",
-    Run = function()
-        print("Hello from plugin!")
-    end
-}
-]])
+    if not isfolder("NasPlugins") then
+        makefolder("NasPlugins")
+        writefile("NasPlugins/README.txt", "Put your .nas plugin files here as tables with Name, Author, Run()")
     end
 
-    for _, file in ipairs(listfiles(PluginFolder)) do
+    for _, file in ipairs(listfiles("NasPlugins")) do
         if file:sub(-4):lower() == ".nas" then
-            local ok, plugin = pcall(function() return loadfile(file)() end)
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
             if ok and type(plugin) == "table" and plugin.Run then
                 table.insert(list, plugin)
             end
@@ -500,7 +489,7 @@ return {
     return list
 end
 
--- 6️⃣ Load plugins and auto-generate buttons
+-- 6️⃣ Load plugins and create buttons
 local Plugins = LoadPlugins() or {}
 
 if type(Plugins) == "table" and #Plugins > 0 then
@@ -510,7 +499,6 @@ if type(Plugins) == "table" and #Plugins > 0 then
         end)
     end
 end
-
 
 
 
