@@ -350,15 +350,17 @@ local function createTabButton(name, pos, callback)
 
 	-- Ensure plugins folder exists
 local PluginFolder = "NasPlugins"
-if not isfolder(PluginFolder) then
-    makefolder(PluginFolder)
-    -- Optional README
-    writefile(PluginFolder.."/README.txt", "Place .nas plugin files here.\nEach plugin must return a table:\n{\n  Name = 'Plugin Name',\n  Author = 'YourName',\n  Run = function() end\n}")
-end
+pcall(function()
+    if not isfolder(PluginFolder) then
+        makefolder(PluginFolder)
+        writefile(PluginFolder.."/README.txt", "Instructions for plugins...")
+    end
+end)
 
 -- Loader
 local function LoadPlugins()
     local list = {}
+pcall(function()
     for _, file in ipairs(listfiles(PluginFolder)) do
         if file:sub(-4) == ".nas" then
             local ok, plugin = pcall(function()
@@ -370,7 +372,7 @@ local function LoadPlugins()
         end
     end
     return list
-end
+end)
 
 local Plugins = LoadPlugins() or {}
 
