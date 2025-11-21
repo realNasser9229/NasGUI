@@ -323,7 +323,6 @@ containerClientServer.BackgroundTransparency = 1
 containerClientServer.Visible = false
 containerClientServer.ZIndex = 1
 
-
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
     local b = Instance.new("TextButton", tabFrame)
@@ -363,6 +362,19 @@ createTabButton("Plugins", 330, function()
     containerMisc.Visible = false
     containerClientServer.Visible = true
 end)
+
+-- Plugins Tab ScrollingFrame
+local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
+scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
+scrollPlugins.BackgroundTransparency = 1
+scrollPlugins.ScrollBarThickness = 5
+scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
+scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0) -- Auto-adjust later
+scrollPlugins.ZIndex = 1
+
+local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginsLayout.Padding = UDim.new(0, 10)
+pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 
 -- Main Tab ScrollingFrame
