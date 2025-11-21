@@ -418,15 +418,15 @@ end
 
 -- 1️⃣ Create Plugins container
 local containerPlugins = Instance.new("Frame", mainFrame)
-containerPlugins.Size = UDim2.new(1, 0, 1, -60)       -- leave space for tab buttons
-containerPlugins.Position = UDim2.new(0, 0, 0, 60)    -- starts just below tab buttons
+containerPlugins.Size = UDim2.new(1, 0, 1, -100)      -- leave enough space for tabs & margin
+containerPlugins.Position = UDim2.new(0, 0, 0, 100)   -- start far below the top
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
 -- 2️⃣ Create scrolling frame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, 0)  -- fill the container
+scrollPlugins.Size = UDim2.new(1, -20, 1, 0)  -- fills container
 scrollPlugins.Position = UDim2.new(0, 10, 0, 0)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
@@ -438,17 +438,20 @@ local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
 pluginLayout.Padding = UDim.new(0, 10)
 pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto-adjust canvas size when buttons are added
+-- Auto-adjust canvas size whenever buttons are added
 pluginLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginLayout.AbsoluteContentSize.Y + 10)
 end)
 
 -- 3️⃣ Add the Plugins tab button
 createTabButton("Plugins", 330, function()
+    -- Hide all other containers
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
     containerClientServer.Visible = false
+    
+    -- Show only plugins
     containerPlugins.Visible = true
 end)
 
@@ -499,7 +502,6 @@ if type(Plugins) == "table" and #Plugins > 0 then
         end)
     end
 end
-
 
 
 -- Main Tab Buttons
