@@ -416,22 +416,21 @@ end
 -- PLUGIN SYSTEM FOR NasGUI
 -- =========================
 
--- 1️⃣ Plugins Container (matches other tab containers)
+-- 1️⃣ Create Plugins container (inside main GUI container, same size as others)
 local containerPlugins = Instance.new("Frame", mainFrame)
+containerPlugins.Size = UDim2.new(1, 0, 1, 0)
+containerPlugins.Position = UDim2.new(0,0,0,0)
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
--- Prevent overlap with top drag bar (~50px)
-containerPlugins.Size = UDim2.new(1, 0, 1, -50)
-containerPlugins.Position = UDim2.new(0, 0, 0, 50)
-
--- 2️⃣ ScrollingFrame inside Plugins container
+-- 2️⃣ Create scrolling frame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- smaller padding to avoid overlap
+scrollPlugins.Position = UDim2.new(0,10,0,10)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
+scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollPlugins.ZIndex = 1
 
@@ -456,7 +455,7 @@ end)
 -- 4️⃣ Helper to create plugin buttons
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Size = UDim2.new(1, 0, 0, 40) -- full width of scrolling frame
     btn.Text = name
     btn.TextSize = 14
     btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
@@ -473,17 +472,34 @@ local function LoadPlugins()
 
     if not isfolder("NasPlugins") then
         makefolder("NasPlugins")
-        -- Optional README
         writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
     end
 
     for _, file in ipairs(listfiles("NasPlugins")) do
         if file:sub(-4):lower() == ".nas" then
-            print("Found plugin:", file)
             local ok, plugin = pcall(function()
                 return loadfile(file)()
             end)
-            print(ok, plugin)
+            if ok and type(plugin) == "table" and plugin.Run then
+                table.insert(list, plugin)
+            end
+        end
+    end
+
+    return list
+end
+
+-- 6️⃣ Load plugins and auto-generate buttons
+local Plugins = LoadPlugins() or {}
+
+if type(Plugins) == "table" and #Plugins > 0 then
+    for _, plugin in ipairs(Plugins) do
+        AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
+            task.spawn(plugin.Run)
+        end)
+    end
+end
+
 
 
 -- Main Tab Buttons
