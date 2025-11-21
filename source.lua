@@ -394,6 +394,13 @@ containerMisc.BackgroundTransparency = 1
 containerMisc.Visible = false
 containerMisc.ZIndex = 1
 
+-- Plugins container
+local containerClientServer = Instance.new("Frame", mainContainer) -- or whatever your main GUI parent is
+containerClientServer.Size = UDim2.new(1, 0, 1, 0)
+containerClientServer.BackgroundTransparency = 1
+containerClientServer.Visible = false
+containerClientServer.ZIndex = 1
+
 
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
@@ -427,6 +434,12 @@ createTabButton("Miscellaneous", 220, function()
     containerExec.Visible = false
     containerMisc.Visible = true
     containerClientServer.Visible = false
+end)
+createTabButton("Plugins", 330, function()
+    containerMain.Visible = false
+    containerExec.Visible = false
+    containerMisc.Visible = false
+    containerClientServer.Visible = true
 end)
 
 
