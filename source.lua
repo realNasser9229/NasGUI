@@ -8,7 +8,6 @@ if CoreGui:FindFirstChild("NasIntroV2") then
     CoreGui.NasIntroV2:Destroy()
 end
 
-
 local scr = Instance.new("ScreenGui")
 scr.Name = "NasIntroV2"
 scr.Parent = CoreGui
@@ -207,7 +206,7 @@ mainFrame.Draggable = true
 -- Cozy Background Image (replace with your preferred cozy image ID)
 local bgImage = Instance.new("ImageLabel", mainFrame)
 bgImage.Size = UDim2.new(1, 0, 1, 0)
-bgImage.BackgroundTransparency = 0
+bgImage.BackgroundTransparency = 1
 bgImage.Image = "rbxassetid://82411403129832" -- Cozy red/black abstract vibe
 bgImage.ImageTransparency = 0.3
 bgImage.ZIndex = 0
@@ -317,6 +316,7 @@ containerMisc.BackgroundTransparency = 1
 containerMisc.Visible = false
 containerMisc.ZIndex = 1
 
+
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
     local b = Instance.new("TextButton", tabFrame)
@@ -329,26 +329,28 @@ local function createTabButton(name, pos, callback)
     b.TextSize = 14
     b.ZIndex = 1
     b.MouseButton1Click:Connect(callback)
-		
+end
+
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerPlugins.Visible = false
+    containerClientServer.Visible = false
 end)
 createTabButton("Executor", 110, function()
     containerMain.Visible = false
     containerExec.Visible = true
     containerMisc.Visible = false
-    containerPlugins.Visible = false
+    containerClientServer.Visible = false
 end)
 createTabButton("Miscellaneous", 220, function()
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = true
-    containerPlugins.Visible = false
+    containerClientServer.Visible = false
 end)
+
 
 -- Main Tab ScrollingFrame
 local scrollMain = Instance.new("ScrollingFrame", containerMain)
@@ -579,6 +581,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/C00lHamoot/c00lgui-1/
                 local label = Instance.new("TextLabel", billboard)
                 label.Size = UDim2.new(1, 0, 1, 0)
                 label.BackgroundTransparency = 1
+                label.Text = "Nas' Slave"
                 label.Text = "Nas' Slave"
                 label.TextColor3 = Color3.fromRGB(255, 255, 255)
                 label.TextScaled = true
