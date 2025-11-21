@@ -8,7 +8,7 @@ if CoreGui:FindFirstChild("NasIntroV2") then
     CoreGui.NasIntroV2:Destroy()
 end
 
-task.spawn(function()
+
 local scr = Instance.new("ScreenGui")
 scr.Name = "NasIntroV2"
 scr.Parent = CoreGui
@@ -316,7 +316,6 @@ containerMisc.Position = containerMain.Position
 containerMisc.BackgroundTransparency = 1
 containerMisc.Visible = false
 containerMisc.ZIndex = 1
--- Plugins Container
 
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
@@ -350,7 +349,6 @@ createTabButton("Miscellaneous", 220, function()
     containerMisc.Visible = true
     containerPlugins.Visible = false
 end)
-
 
 -- Main Tab ScrollingFrame
 local scrollMain = Instance.new("ScrollingFrame", containerMain)
@@ -1528,4 +1526,3 @@ StarterGui:SetCore("SendNotification", {
 warn("IF YOU STUMBLE UPON ANY BUGS ON THE SCRIPT, DM '@nas9229alt' in DISCORD!")
 task.wait(0.1)
 print("~~~~~ Made with LOVE! ~~~~~")
-end)
