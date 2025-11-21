@@ -477,28 +477,6 @@ pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 local function AddPlugin(pluginName, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
     btn.Size = UDim2.new(1,-20,0,40)
-    btn.Position = UDim2.new(0,10,0,0)
-    btn.Text = pluginName
-    btn.TextSize = 14
-    btn.BackgroundColor3 = Color3.fromRGB(128,0,0)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.Gotham
-    btn.MouseButton1Click:Connect(callback)
-end
-
--- Auto-generate buttons for each plugin
-if type(Plugins) == "table" and #Plugins > 0 then
-    for _, plugin in ipairs(Plugins) do
-        print("Adding button for plugin:", plugin.Name)
-        local btn = AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
-            task.spawn(plugin.Run)
-        end)
-        print("Button created?", btn)  -- should print a TextButton instance
-    end
-end
-
--- Update CanvasSize to fit buttons
-scrollPlugins.CanvasSize = UDim2.new(0,0,0,pluginLayout.AbsoluteContentSize.Y + 10)
 
 -- Main Tab Buttons
 local buttons = {
