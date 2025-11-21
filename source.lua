@@ -149,6 +149,32 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 
+-- Create plugin folder
+local PluginFolder = "NasPlugins"
+if not isfolder(PluginFolder) then
+    makefolder(PluginFolder)
+end
+
+-- Loader
+local function LoadPlugins()
+    local list = {}
+
+    for _, file in ipairs(listfiles(PluginFolder)) do
+        if file:sub(-4) == ".nas" then
+            local ok, plugin = pcall(function()
+                return loadfile(file)()
+            end)
+
+            if ok and type(plugin) == "table" and plugin.Run then
+                table.insert(list, plugin)
+            end
+        end
+    end
+
+    return list
+end
+
+local Plugins = LoadPlugins()
 
 -- Play startup sound
 local startupSound = Instance.new("Sound", workspace)
@@ -331,6 +357,25 @@ local function createTabButton(name, pos, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
+-- ⭐ AUTO GENERATE PLUGIN BUTTONS ⭐
+local PluginOffset = 0
+
+for _, plugin in ipairs(Plugins) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = MainTab
+    btn.Size = UDim2.new(0, 200, 0, 35)
+    btn.Position = UDim2.new(0, 10, 0, 10 + PluginOffset)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Text = plugin.Name .. " | by " .. (plugin.Author or "Unknown")
+
+    btn.MouseButton1Click:Connect(function()
+        task.spawn(plugin.Run)
+    end)
+
+    PluginOffset = PluginOffset + 40
+end
 
 createTabButton("Main", 0, function()
     containerMain.Visible = true
