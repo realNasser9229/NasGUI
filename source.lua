@@ -416,70 +416,79 @@ end
 -- PLUGIN SYSTEM FOR NasGUI
 -- =========================
 
--- 1️⃣ Create Plugins container (inside main GUI container, same size as others)
-local containerPlugins = Instance.new("Frame", mainFrame)
+-- 1️⃣ Create a proper Plugins container (same size as other tab containers)
+local containerPlugins = Instance.new("Frame", mainFrame) -- mainFrame = your NasGUI main container
 containerPlugins.Size = UDim2.new(1, 0, 1, 0)
-containerPlugins.Position = UDim2.new(0,0,0,0)
+containerPlugins.Position = UDim2.new(0, 0, 0, 0)
 containerPlugins.BackgroundTransparency = 1
 containerPlugins.Visible = false
 containerPlugins.ZIndex = 1
 
--- 2️⃣ Create scrolling frame inside Plugins container
+-- 2️⃣ Scroll frame inside Plugins container
 local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- smaller padding to avoid overlap
-scrollPlugins.Position = UDim2.new(0,10,0,10)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- slight padding
+scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollPlugins.ZIndex = 1
 
-local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginsLayout.Padding = UDim.new(0, 10)
-pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginLayout.Padding = UDim.new(0, 10)
+pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto-adjust canvas size when buttons are added
-pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
+-- Auto-adjust canvas size whenever buttons are added
+pluginLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- 3️⃣ Add the Plugins tab button
+-- 3️⃣ Add Plugins tab button
 createTabButton("Plugins", 330, function()
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = false
+    containerClientServer.Visible = false -- hide old container if still used
     containerPlugins.Visible = true
 end)
 
--- 4️⃣ Helper to create plugin buttons
+-- 4️⃣ Helper to add plugin buttons
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1, 0, 0, 40) -- full width of scrolling frame
+    btn.Size = UDim2.new(1, 0, 0, 40)
     btn.Text = name
     btn.TextSize = 14
     btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.Gotham
-    btn.ZIndex = 1
+    btn.ZIndex = 2
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 5️⃣ Loader to get all .nas plugins
+-- 5️⃣ Loader to read all .nas plugins
 local function LoadPlugins()
     local list = {}
+    local PluginFolder = "NasPlugins"
 
-    if not isfolder("NasPlugins") then
-        makefolder("NasPlugins")
-        writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
+    if not isfolder(PluginFolder) then
+        makefolder(PluginFolder)
+        writefile(PluginFolder.."/README.txt", [[
+NasGUI Plugins:
+- Each plugin should be a .nas file.
+- Must return a table with: Name, Author, Run() function
+Example:
+return {
+    Name = "Test Plugin",
+    Author = "You",
+    Run = function()
+        print("Hello from plugin!")
+    end
+}
+]])
     end
 
-    for _, file in ipairs(listfiles("NasPlugins")) do
+    for _, file in ipairs(listfiles(PluginFolder)) do
         if file:sub(-4):lower() == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
+            local ok, plugin = pcall(function() return loadfile(file)() end)
             if ok and type(plugin) == "table" and plugin.Run then
                 table.insert(list, plugin)
             end
