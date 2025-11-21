@@ -317,25 +317,6 @@ containerMisc.Visible = false
 containerMisc.ZIndex = 1
 -- Plugins Container
 
-local containerPlugins = Instance.new("Frame", mainContainer) -- parent is your main GUI frame
-containerPlugins.Size = UDim2.new(1, 0, 1, 0)
-containerPlugins.BackgroundTransparency = 1
-containerPlugins.Visible = false
-
--- Scroll frame for plugin buttons
-local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, 0, 1, 0)
-scrollPlugins.BackgroundTransparency = 1
-scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
-scrollPlugins.CanvasSize = UDim2.new(0,0,0,0)
-
--- Optional layout for spacing
-local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginLayout.Padding = UDim.new(0,10)
-pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
     local b = Instance.new("TextButton", tabFrame)
@@ -367,13 +348,6 @@ createTabButton("Miscellaneous", 220, function()
     containerExec.Visible = false
     containerMisc.Visible = true
     containerPlugins.Visible = false
-end)
-createTabButton("Plugins", 330, function()
-    containerMain.Visible = false
-    containerExec.Visible = false
-    containerMisc.Visible = false
-    containerClientServer.Visible = false
-    containerPlugins.Visible = true
 end)
 
 
