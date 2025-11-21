@@ -348,34 +348,29 @@ local function createTabButton(name, pos, callback)
     b.ZIndex = 1
     b.MouseButton1Click:Connect(callback)
 
-	-- Ensure plugins folder exists
-local PluginFolder = "NasPlugins"
-pcall(function()
-    if not isfolder(PluginFolder) then
-        makefolder(PluginFolder)
-        writefile(PluginFolder.."/README.txt", "Instructions for plugins...")
-    end
-end)
-
--- Loader
+	-- 1️⃣ Loader
 local function LoadPlugins()
     local list = {}
-pcall(function()
-    for _, file in ipairs(listfiles(PluginFolder)) do
+    local ok, files = pcall(listfiles, "NasPlugins")
+    files = files or {}
+    for _, file in ipairs(files) do
         if file:sub(-4) == ".nas" then
-            local ok, plugin = pcall(function()
+            local success, plugin = pcall(function()
                 return loadfile(file)()
             end)
-            if ok and type(plugin) == "table" and plugin.Run then
+            if success and type(plugin) == "table" and plugin.Run then
                 table.insert(list, plugin)
             end
         end
     end
     return list
+end
+
+local Plugins = {}
+pcall(function()
+    Plugins = LoadPlugins() or {}
 end)
-
-local Plugins = LoadPlugins() or {}
-
+	
 	local PluginOffset = 0
 function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
@@ -390,7 +385,6 @@ function AddPlugin(name, callback)
     PluginOffset = PluginOffset + 50
     scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, PluginOffset + 20)
 	end
-
 	if type(Plugins) == "table" and #Plugins > 0 then
     for _, plugin in ipairs(Plugins) do
         AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
