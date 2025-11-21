@@ -8,6 +8,7 @@ if CoreGui:FindFirstChild("NasIntroV2") then
     CoreGui.NasIntroV2:Destroy()
 end
 
+task.spawn(function()
 local scr = Instance.new("ScreenGui")
 scr.Name = "NasIntroV2"
 scr.Parent = CoreGui
@@ -1527,3 +1528,4 @@ StarterGui:SetCore("SendNotification", {
 warn("IF YOU STUMBLE UPON ANY BUGS ON THE SCRIPT, DM '@nas9229alt' in DISCORD!")
 task.wait(0.1)
 print("~~~~~ Made with LOVE! ~~~~~")
+end)
