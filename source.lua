@@ -337,32 +337,30 @@ local function createTabButton(name, pos, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
-
-createTabButton("Main", 0, function()
-    containerMain.Visible = true
+local function HideAllTabs()
+    containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
     containerClientServer.Visible = false
+end
+
+createTabButton("Main", 0, function()
+	HideAllTabs()
+    containerMain.Visible = true
 end)
 
 createTabButton("Executor", 110, function()
-    containerMain.Visible = false
+	HideAllTabs()
     containerExec.Visible = true
-    containerMisc.Visible = false
-    containerClientServer.Visible = false
 end)
 
 createTabButton("Miscellaneous", 220, function()
-    containerMain.Visible = false
-    containerExec.Visible = false
+	HideAllTabs()
     containerMisc.Visible = true
-    containerClientServer.Visible = false
 end)
 
 createTabButton("Plugins", 330, function()
-    containerMain.Visible = false
-    containerExec.Visible = false
-    containerMisc.Visible = false
+	HideAllTabs()
     containerClientServer.Visible = true
 end)
 
