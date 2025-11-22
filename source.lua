@@ -322,6 +322,18 @@ containerClientServer.BackgroundTransparency = 1
 containerClientServer.Visible = false
 containerClientServer.ZIndex = 1
 
+-- Forces Plugins tab to hide whenever ANY other tab is clicked
+for _, btn in ipairs(tabButtonsFolder:GetChildren()) do
+    if btn:IsA("TextButton") then
+        btn.MouseButton1Click:Connect(function()
+            -- If the button clicked is NOT the Plugins button, hide plugins
+            if btn.Name ~= "Plugins" then
+                containerClientServer.Visible = false
+            end
+        end)
+    end
+end
+
 -- Tab Buttons
 local function createTabButton(name, pos, callback)
     local b = Instance.new("TextButton", tabFrame)
