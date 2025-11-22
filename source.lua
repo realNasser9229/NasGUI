@@ -381,6 +381,70 @@ pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
 end)
 
+-- DEBUG + ENFORCE: hide Plugins container when switching away from it
+local RunService = game:GetService("RunService")
+local function findTabButtons()
+    local out = {}
+    for _, obj in ipairs(mainFrame:GetDescendants()) do
+        if obj:IsA("TextButton") then
+            local t = obj.Text or ""
+            out[t] = obj
+        end
+    end
+    return out
+end
+
+local tabs = findTabButtons()
+local pluginBtn = tabs["Plugins"]
+-- collect other tab buttons (any button that isn't the Plugins button)
+local otherButtons = {}
+for name, btn in pairs(tabs) do
+    if name ~= "Plugins" and btn and btn:IsA("TextButton") then
+        table.insert(otherButtons, btn)
+    end
+end
+
+-- Safety: if we couldn't detect buttons by text, fallback to scanning by positions (best-effort)
+if #otherButtons == 0 then
+    for _, obj in ipairs(mainFrame:GetDescendants()) do
+        if obj:IsA("TextButton") and obj ~= pluginBtn then
+            table.insert(otherButtons, obj)
+        end
+    end
+end
+
+-- 1) Force-hide after any other tab is clicked (tiny delay so original handlers run first)
+for _, btn in ipairs(otherButtons) do
+    btn.MouseButton1Click:Connect(function()
+        task.delay(0.02, function()
+            if containerClientServer and containerClientServer.Visible then
+                containerClientServer.Visible = false
+                warn("[Plugins guard] hid containerClientServer after clicking tab: "..(btn.Text or btn.Name))
+            end
+        end)
+    end)
+end
+
+-- 2) Watch for visibility changes and print (helps find who/when re-enables it)
+if containerClientServer then
+    containerClientServer:GetPropertyChangedSignal("Visible"):Connect(function()
+        print("[Plugins guard] containerClientServer.Visible ->", containerClientServer.Visible)
+    end)
+end
+
+-- 3) Optional: persistent enforcement while any other tab is visible (uncomment if needed)
+-- This will aggressively hide plugins whenever Main/Exec/Misc is active.
+-- Use only if the quick fix above doesn't stop it from reappearing.
+--[[
+RunService.Heartbeat:Connect(function()
+    if containerClientServer then
+        if (containerMain.Visible or containerExec.Visible or containerMisc.Visible) and containerClientServer.Visible then
+            containerClientServer.Visible = false
+        end
+    end
+end)
+]]
+
 
 -- Main Tab ScrollingFrame
 local scrollMain = Instance.new("ScrollingFrame", containerMain)
