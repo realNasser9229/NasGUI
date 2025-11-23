@@ -412,10 +412,20 @@ commands.playsound = function(args)
 end
 
 commands.cmds = function(args)
+    -- Collect all command names
     local names = {}
-    for k,_ in pairs(commands) do table.insert(names, k) end
+    for k,_ in pairs(commands) do
+        table.insert(names, k)
+    end
     table.sort(names)
-    return true, "Commands: " .. table.concat(names, ", ")
+
+    -- Log them in the terminal
+    addLog("Available Commands:", Color3.fromRGB(150,150,255))
+    for _, name in ipairs(names) do
+        addLog(" - "..name, Color3.fromRGB(200,200,200))
+    end
+
+    return true, "Listed "..#names.." commands."
 end
 
 -------------------------------------------------------------------
