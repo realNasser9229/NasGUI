@@ -543,12 +543,18 @@ end},
     local RunService = game:GetService("RunService")
     local plr = Players.LocalPlayer
     local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then 
+        return warn("[Terminal] Your character is missing HumanoidRootPart.") 
+    end
 
-    local targetName = args[1]
-    local speed = tonumber(args[2]) or 5 -- default speed
-    if not targetName then return warn("[Terminal] Usage: bang {player} {speed}") end
+    -- Safe args checking
+    local targetName = args and args[1]
+    local speed = tonumber(args and args[2]) or 5
+    if not targetName then 
+        return warn("[Terminal] Usage: bang {player} {speed}") 
+    end
 
+    -- Target player validation
     local target = Players:FindFirstChild(targetName)
     if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
         return warn("[Terminal] Target player not found or missing HumanoidRootPart.")
@@ -562,11 +568,21 @@ end},
     print("[Terminal] Bang started on "..targetName.." with speed "..speed)
 
     -- Stop previous bang if active
-    if getgenv().NAS_BANG_CONN then getgenv().NAS_BANG_CONN:Disconnect() end
+    if getgenv().NAS_BANG_CONN then
+        getgenv().NAS_BANG_CONN:Disconnect()
+        getgenv().NAS_BANG_CONN = nil
+    end
 
-    getgenv().NAS_BANG_CONN = RunService.Heartbeat:Connect(function(dt)
-        if not hrp or not targetHRP then getgenv().NAS_BANG_CONN:Disconnect() return end
-        hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,-distance * direction)
+    -- Connect Heartbeat for the bang effect
+    getgenv().NAS_BANG_CONN = RunService.Heartbeat:Connect(function()
+        if not hrp or not targetHRP then
+            getgenv().NAS_BANG_CONN:Disconnect()
+            getgenv().NAS_BANG_CONN = nil
+            return
+        end
+
+        -- Alternate HRP behind target
+        hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -distance * direction)
         direction = direction * -1
     end)
 end},
