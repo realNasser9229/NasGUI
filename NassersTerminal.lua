@@ -347,6 +347,59 @@ end},
     end
 end},
 
+{"dance", function(args)
+    local Players = game:GetService("Players")
+    local plr = Players.LocalPlayer
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then 
+        return warn("[Terminal] No Humanoid found in your character.") 
+    end
+
+    -- Only support R15
+    if hum.RigType ~= Enum.HumanoidRigType.R15 then
+        return warn("[Terminal] Dance command only works on R15 characters.")
+    end
+
+    local animSpeed = tonumber(args and args[1]) or 1.6
+    local animId = "rbxassetid://140290021376754" -- R6 animation ID, still works on R15
+
+    -- Load animation
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = hum
+    end
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = animId
+
+    local track = animator:LoadAnimation(anim)
+    track:Play()
+    track:AdjustSpeed(animSpeed)
+
+    print("[Terminal] Dance animation played at speed "..animSpeed)
+end},
+
+{"undance", function()
+    local Players = game:GetService("Players")
+    local plr = Players.LocalPlayer
+    local char = plr.Character
+    if not char then return end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then return end
+
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if not animator then return end
+
+    -- Stop all currently playing animations
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        track:Stop()
+    end
+
+    print("[Terminal] Dance animation stopped.")
+end},
+
 {"fireclickdetectors", function(args)
     local Workspace = game:GetService("Workspace")
     local Players = game:GetService("Players")
