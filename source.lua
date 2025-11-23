@@ -337,52 +337,46 @@ local function createTabButton(name, pos, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
--- 1️⃣ Ensure you have a proper HideAllTabs helper
+-- =========================
+-- TAB VISIBILITY FIX
+-- =========================
+
+-- 1️⃣ Universal function to hide all tabs
 local function HideAllTabs()
-    -- Set all main containers to false
-    if containerMain then containerMain.Visible = false end
-    if containerExec then containerExec.Visible = false end
-    if containerMisc then containerMisc.Visible = false end
-    if containerClientServer then containerClientServer.Visible = false end -- Plugins container
+    containerMain.Visible = false
+    containerExec.Visible = false
+    containerMisc.Visible = false
+    containerClientServer.Visible = false
 end
 
--- 2️⃣ Correctly handle Plugins tab button
-createTabButton("Plugins", 330, function()
-    HideAllTabs()
-    -- Ensure container exists
-    if containerClientServer then
-        containerClientServer.Visible = true
-        -- Optional: bring scrolling frame to front
-        scrollPlugins.Parent = containerClientServer
-        scrollPlugins.ZIndex = 2
-    end
-end)
-
--- 3️⃣ Other tab buttons (example)
+-- 2️⃣ Updated Tab Buttons
 createTabButton("Main", 0, function()
     HideAllTabs()
-    if containerMain then containerMain.Visible = true end
+    containerMain.Visible = true
 end)
 
 createTabButton("Executor", 110, function()
     HideAllTabs()
-    if containerExec then containerExec.Visible = true end
+    containerExec.Visible = true
 end)
 
 createTabButton("Miscellaneous", 220, function()
     HideAllTabs()
-    if containerMisc then containerMisc.Visible = true end
+    containerMisc.Visible = true
 end)
 
--- 4️⃣ Optional: enforce a small delay on Plugins tab to ensure scrolling frame exists
--- This prevents it from “popping” early
---[[ 
-task.defer(function()
-    if containerClientServer and scrollPlugins then
-        scrollPlugins.Parent = containerClientServer
+createTabButton("Plugins", 330, function()
+    HideAllTabs()
+    containerClientServer.Visible = true
+end)
+
+-- 3️⃣ Safety enforcement (optional)
+-- Makes sure Plugins container never shows while another tab is visible
+game:GetService("RunService").Heartbeat:Connect(function()
+    if containerClientServer.Visible and (containerMain.Visible or containerExec.Visible or containerMisc.Visible) then
+        containerClientServer.Visible = false
     end
 end)
-]]
 
 -- Plugins Tab ScrollingFrame
 local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
