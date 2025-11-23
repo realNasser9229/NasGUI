@@ -271,41 +271,6 @@ end
 -- MOVEMENT + FUN COMMANDS
 -------------------------------------------------------------------
 
-commands.fly = function(args)
-    local speed = tonumber(args[1]) or 2
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        return false, "Error: HRP missing."
-    end
-    
-    if _G.NasFlyRunning then return false, "Already flying." end
-    _G.NasFlyRunning = true
-
-    local hrp = char.HumanoidRootPart
-    local UIS = game:GetService("UserInputService")
-
-    task.spawn(function()
-        while _G.NasFlyRunning do
-            local v = Vector3.zero
-            if UIS:IsKeyDown(Enum.KeyCode.W) then v += hrp.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then v -= hrp.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.A) then v -= hrp.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.D) then v += hrp.CFrame.RightVector end
-
-            hrp.Velocity = v * (speed * 50)
-            task.wait()
-        end
-        hrp.Velocity = Vector3.zero
-    end)
-
-    return true, "Fly enabled (Speed: " .. speed .. ")"
-end
-
-commands.unfly = function(args)
-    _G.NasFlyRunning = false
-    return true, "Fly disabled."
-end
-
 commands.spin = function(args)
     local speed = tonumber(args[1]) or 5
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -324,14 +289,6 @@ end
 commands.unspin = function(args)
     _G.NasSpin = false
     return true, "Spin disabled."
-end
-
-commands.btools = function(args)
-    for _, t in ipairs({"HopperBin", "HopperBin", "HopperBin"}) do
-        local bin = Instance.new("HopperBin", LocalPlayer.Backpack)
-        bin.BinType = Enum.BinType[t == 1 and "Clone" or t == 2 and "GameTool" or "Hammer"]
-    end
-    return true, "BTools granted."
 end
 
 commands.jump = function(args)
@@ -537,7 +494,7 @@ commands.floatpad = function(args)
     if not hrp then return false, "HRP not found." end
     local pad = Instance.new("Part")
     pad.Size = Vector3.new(6,1,6)
-    pad.Transparency = 1
+    pad.Transparency = 0.5
     pad.Anchored = true
     pad.CanCollide = true
     pad.CFrame = hrp.CFrame - Vector3.new(0,3,0)
@@ -553,31 +510,6 @@ commands.slide = function(args)
     if not hrp then return false, "HRP not found." end
     hrp.Velocity = hrp.CFrame.LookVector * 50
     return true, "Sliding forward."
-end
-
-commands.spinwalk = function(args)
-    local speed = tonumber(args[1]) or 5
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false, "HRP not found." end
-
-    _G.NasSpinWalk = true
-    task.spawn(function()
-        while _G.NasSpinWalk do
-            hrp.CFrame *= CFrame.Angles(0, math.rad(speed), 0)
-            task.wait()
-        end
-    end)
-    return true, "Spinwalk activated."
-end
-
-commands.superjump = function(args)
-    local height = tonumber(args[1]) or 100
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if not hum then return false, "Humanoid not found." end
-    hum.JumpPower = height
-    hum.Jump = true
-    return true, "Superjump activated ("..height..")."
 end
 
 -------------------------------------------------------------------
@@ -845,24 +777,6 @@ commands.stopmusic = function(args)
     return true, "Music stopped."
 end
 
-commands.jumpboom = function(args)
-    local s = Instance.new("Sound", workspace)
-    s.SoundId = "rbxassetid://12222225" -- example placeholder
-    s.Volume = 1
-    s:Play()
-    game:GetService("Debris"):AddItem(s,5)
-    return true, "Jump sound played."
-end
-
-commands.stepboom = function(args)
-    local s = Instance.new("Sound", workspace)
-    s.SoundId = "rbxassetid://12222226" -- example placeholder
-    s.Volume = 1
-    s:Play()
-    game:GetService("Debris"):AddItem(s,5)
-    return true, "Step sound played."
-end
-
 -------------------------------------------------------------------
 -- CAMERA / SCREEN EFFECTS
 -------------------------------------------------------------------
@@ -895,14 +809,6 @@ end
 commands.unfollow = function(args)
     workspace.CurrentCamera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     return true, "Camera reset to self."
-end
-
-commands.invert = function(args)
-    local cam = workspace.CurrentCamera
-    local blur = Instance.new("ColorCorrectionEffect", cam)
-    blur.TintColor = Color3.new(1,1,1) - Color3.new(1,1,1)
-    task.delay(0.2,function() blur:Destroy() end)
-    return true, "Screen inverted briefly."
 end
 
 -- 5. EXECUTION HANDLER
