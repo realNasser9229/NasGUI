@@ -459,6 +459,44 @@ RunService.Heartbeat:Connect(function()
 end)
 ]]
 
+-- =========================
+-- PLUGINS TAB VISIBILITY FIX
+-- =========================
+
+-- Make sure all containers start hidden except Main (or whatever default)
+containerMain.Visible = true
+containerExec.Visible = false
+containerMisc.Visible = false
+containerClientServer.Visible = false
+
+-- Universal hide function
+local function HideAllTabs()
+    containerMain.Visible = false
+    containerExec.Visible = false
+    containerMisc.Visible = false
+    containerClientServer.Visible = false
+end
+
+-- Hook the tab buttons
+for _, btn in ipairs(mainFrame:GetDescendants()) do
+    if btn:IsA("TextButton") then
+        btn.MouseButton1Click:Connect(function()
+            -- Hide all tabs first
+            HideAllTabs()
+
+            -- Show correct tab based on text
+            if btn.Text == "Main" then
+                containerMain.Visible = true
+            elseif btn.Text == "Executor" then
+                containerExec.Visible = true
+            elseif btn.Text == "Miscellaneous" then
+                containerMisc.Visible = true
+            elseif btn.Text == "Plugins" then
+                containerClientServer.Visible = true
+            end
+        end)
+    end
+end
 
 -- Main Tab ScrollingFrame
 local scrollMain = Instance.new("ScrollingFrame", containerMain)
