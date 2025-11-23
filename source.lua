@@ -337,92 +337,6 @@ local function createTabButton(name, pos, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
--- =========================
--- PLUGIN SYSTEM FOR NasGUI
--- =========================
-
--- 1️⃣ Plugins container (keep your existing name, e.g., containerClientServer)
--- Already exists: containerClientServer
-
--- 2️⃣ Scrolling frame inside the container
-local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -20) -- leave some padding
-scrollPlugins.Position = UDim2.new(0, 10, 0, 10)
-scrollPlugins.BackgroundTransparency = 1
-scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
-scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginsLayout.Padding = UDim.new(0, 10)
-pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
--- Auto-update canvas size when new buttons are added
-pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
-end)
-
--- 3️⃣ Helper to create plugin buttons
-local function AddPlugin(name, callback)
-    local btn = Instance.new("TextButton", scrollPlugins)
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.Text = name
-    btn.TextSize = 14
-    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.ZIndex = 1
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
--- 4️⃣ Loader for .nas plugins
-local function LoadPlugins()
-    local list = {}
-
-    if not isfolder("NasPlugins") then
-        makefolder("NasPlugins")
-        writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
-    end
-
-    local files = listfiles("NasPlugins")
-    print("[NasGUI] Found files:", unpack(files)) -- DEBUG: see what it sees
-
-    for _, file in ipairs(files) do
-        if file:sub(-4):lower() == ".nas" then
-            local ok, plugin = pcall(function()
-                return loadfile(file)()
-            end)
-            if ok and type(plugin) == "table" and plugin.Run then
-                table.insert(list, plugin)
-                print("[NasGUI] Loaded plugin:", plugin.Name)
-            else
-                warn("[NasGUI] Failed loading plugin:", file)
-            end
-        else
-            print("[NasGUI] Skipping non-plugin file:", file)
-        end
-    end
-
-    return list
-end
-
--- 5️⃣ Load and auto-generate buttons
-local Plugins = LoadPlugins() or {}
-
-for _, plugin in ipairs(Plugins) do
-    AddPlugin(plugin.Name.." | by "..(plugin.Author or "Unknown"), function()
-        task.spawn(plugin.Run)
-    end)
-end
-
-print("[NasGUI] Plugin buttons generated:", #Plugins)
-
--- =========================
--- TAB VISIBILITY FIX
--- =========================
-
--- 1️⃣ Universal function to hide all tabs
 local function HideAllTabs()
     containerMain.Visible = false
     containerExec.Visible = false
@@ -430,33 +344,24 @@ local function HideAllTabs()
     containerClientServer.Visible = false
 end
 
--- 2️⃣ Updated Tab Buttons
 createTabButton("Main", 0, function()
-    HideAllTabs()
+	HideAllTabs()
     containerMain.Visible = true
 end)
 
 createTabButton("Executor", 110, function()
-    HideAllTabs()
+	HideAllTabs()
     containerExec.Visible = true
 end)
 
 createTabButton("Miscellaneous", 220, function()
-    HideAllTabs()
+	HideAllTabs()
     containerMisc.Visible = true
 end)
 
 createTabButton("Plugins", 330, function()
-    HideAllTabs()
+	HideAllTabs()
     containerClientServer.Visible = true
-end)
-
--- 3️⃣ Safety enforcement (optional)
--- Makes sure Plugins container never shows while another tab is visible
-game:GetService("RunService").Heartbeat:Connect(function()
-    if containerClientServer.Visible and (containerMain.Visible or containerExec.Visible or containerMisc.Visible) then
-        containerClientServer.Visible = false
-    end
 end)
 
 -- Plugins Tab ScrollingFrame
@@ -540,44 +445,6 @@ RunService.Heartbeat:Connect(function()
 end)
 ]]
 
--- =========================
--- PLUGINS TAB VISIBILITY FIX
--- =========================
-
--- Make sure all containers start hidden except Main (or whatever default)
-containerMain.Visible = true
-containerExec.Visible = false
-containerMisc.Visible = false
-containerClientServer.Visible = false
-
--- Universal hide function
-local function HideAllTabs()
-    containerMain.Visible = false
-    containerExec.Visible = false
-    containerMisc.Visible = false
-    containerClientServer.Visible = false
-end
-
--- Hook the tab buttons
-for _, btn in ipairs(mainFrame:GetDescendants()) do
-    if btn:IsA("TextButton") then
-        btn.MouseButton1Click:Connect(function()
-            -- Hide all tabs first
-            HideAllTabs()
-
-            -- Show correct tab based on text
-            if btn.Text == "Main" then
-                containerMain.Visible = true
-            elseif btn.Text == "Executor" then
-                containerExec.Visible = true
-            elseif btn.Text == "Miscellaneous" then
-                containerMisc.Visible = true
-            elseif btn.Text == "Plugins" then
-                containerClientServer.Visible = true
-            end
-        end)
-    end
-end
 
 -- Main Tab ScrollingFrame
 local scrollMain = Instance.new("ScrollingFrame", containerMain)
@@ -611,36 +478,49 @@ end
 
 
 -- =========================
--- PLUGIN SYSTEM FOR NasGUI
+-- PLUGIN SYSTEM FOR NasGUI v2.3
 -- =========================
 
--- 1️⃣ Make sure Plugins container exists and is hidden by default
-containerClientServer.Visible = false  -- this is your Plugins container
-containerClientServer.BackgroundTransparency = 1
-containerClientServer.ZIndex = 1
+-- 1️⃣ Create Plugins container
+local containerPlugins = Instance.new("Frame", mainFrame)
+containerPlugins.Size = UDim2.new(1, 0, 1, -100)      -- leave enough space for tabs & margin
+containerPlugins.Position = UDim2.new(0, 0, 0, 100)   -- start far below the top
+containerPlugins.BackgroundTransparency = 1
+containerPlugins.Visible = false
+containerPlugins.ZIndex = 1
 
 -- 2️⃣ Create scrolling frame inside Plugins container
-local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
-scrollPlugins.Size = UDim2.new(1, -20, 1, -50) -- smaller than full frame so tab buttons don't overlap
-scrollPlugins.Position = UDim2.new(0, 10, 0, 40) -- pushed lower so tabs remain clickable
+local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
+scrollPlugins.Size = UDim2.new(1, -20, 1, 0)  -- fills container
+scrollPlugins.Position = UDim2.new(0, 10, 0, 0)
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
-scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollPlugins.ZIndex = 2
 
-local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginsLayout.Padding = UDim.new(0, 10)
-pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+-- UIListLayout for plugin buttons
+local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginLayout.Padding = UDim.new(0, 10)
+pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- 3️⃣ Tab Button for Plugins (keep your existing tab buttons, just ensure this one toggles visibility)
+-- Auto-adjust canvas size whenever buttons are added
+pluginLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginLayout.AbsoluteContentSize.Y + 10)
+end)
+
+-- 3️⃣ Add the Plugins tab button
 createTabButton("Plugins", 330, function()
+    -- Hide all other containers
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = true
+    containerClientServer.Visible = false
+    
+    -- Show only plugins
+    containerPlugins.Visible = true
 end)
 
--- 4️⃣ Helper to create plugin buttons inside scrollPlugins
+-- 4️⃣ Helper to create plugin buttons
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
     btn.Size = UDim2.new(1, -20, 0, 40)
@@ -649,18 +529,18 @@ local function AddPlugin(name, callback)
     btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.Gotham
-    btn.ZIndex = 1
+    btn.ZIndex = 2
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 5️⃣ Loader to get all .nas plugins
+-- 5️⃣ Loader to read all .nas plugins
 local function LoadPlugins()
     local list = {}
 
     if not isfolder("NasPlugins") then
         makefolder("NasPlugins")
-        writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
+        writefile("NasPlugins/README.txt", "Put your .nas plugin files here as tables with Name, Author, Run()")
     end
 
     for _, file in ipairs(listfiles("NasPlugins")) do
@@ -677,7 +557,7 @@ local function LoadPlugins()
     return list
 end
 
--- 6️⃣ Load plugins and generate buttons
+-- 6️⃣ Load plugins and create buttons
 local Plugins = LoadPlugins() or {}
 
 if type(Plugins) == "table" and #Plugins > 0 then
@@ -688,10 +568,6 @@ if type(Plugins) == "table" and #Plugins > 0 then
     end
 end
 
--- 7️⃣ Auto-adjust canvas size for scrollPlugins
-pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
-end)
 
 -- Main Tab Buttons
 local buttons = {
@@ -1219,6 +1095,55 @@ end},
         end
         player.CharacterAdded:Connect(function(char)
             char:WaitForChild("HumanoidRootPart")
+            createHighlight(char, Color3.fromRGB(255,0,0))
+        end)
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        updatePlayerESP(player)
+    end
+
+    Players.PlayerAdded:Connect(updatePlayerESP)
+
+    -- Track NPCs (anything in Workspace with Humanoid but not a player)
+    local function updateNPCESP(npc)
+        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+            createHighlight(npc, Color3.fromRGB(0,0,255)) -- blue
+        end
+    end
+
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        updateNPCESP(obj)
+    end
+
+    Workspace.DescendantAdded:Connect(updateNPCESP)
+
+    print("[ESP] Active: Players=Red, NPCs=Blue")
+end},
+{"Friends ESP", function()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    local function createHighlight(character, color)
+        local existing = character:FindFirstChild("NasFriendsESP")
+        if existing then existing:Destroy() end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "NasFriendsESP"
+        highlight.FillColor = color
+        highlight.OutlineColor = color
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = character
+        highlight.Parent = character
+    end
+
+    local function applyToPlayer(player)
+        if player == LocalPlayer then return end
+        if not LocalPlayer:IsFriendsWith(player.UserId) then return end
+        if player.Character then
+            createHighlight(player.Character, Color3.fromRGB(255,255,0)) -- yellow
+        end
+        player.CharacterAdded:Connect(function(char)
             createHighlight(char, Color3.fromRGB(255,0,0))
         end)
     end
@@ -1838,4 +1763,4 @@ StarterGui:SetCore("SendNotification", {
 })
 warn("IF YOU STUMBLE UPON ANY BUGS ON THE SCRIPT, DM '@nas9229alt' in DISCORD!")
 task.wait(0.1)
-print("~~~~~ Made with LOVE! ~~~~~")
+print("~~~~~~~~~~~~~~~~~~~~ Made with LOVE! ~~~~~~~~~~~~~~~~~~~~")
