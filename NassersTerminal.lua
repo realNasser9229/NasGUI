@@ -194,6 +194,19 @@ commands.jp = function(args)
     end
 end
 
+
+commands.console = function(args)
+    local UIS = game:GetService("UserInputService")
+    
+    -- Simulate pressing F9
+    task.spawn(function()
+        UIS.InputBegan:Fire({KeyCode = Enum.KeyCode.F9}, false)
+    end)
+    
+    addLog("Attempting to open Dev Console...", Color3.fromRGB(200,200,255))
+    return true, "Console command executed."
+end
+
 -- Command: Print
 commands.print = function(args)
     local msg = table.concat(args, " ")
