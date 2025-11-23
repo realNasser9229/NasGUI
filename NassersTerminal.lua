@@ -1146,10 +1146,17 @@ end},
     -- Connections storage
     getgenv().NAS_FEELINGS_CONNECTIONS = getgenv().NAS_FEELINGS_CONNECTIONS or {}
 
+    -- Get default channel safely
+    local channel
+    pcall(function()
+        channel = TextChatService:GetTextChannels()[1] -- first available channel
+    end)
+    if not channel then warn("[Terminal] No TextChat channel found!") return end
+
     -- Chat helper
     local function chat(msg)
         pcall(function()
-            TextChatService.TextChannels.RBXGeneral:SendAsync(msg)
+            channel:SendAsync(msg)
         end)
     end
 
@@ -1162,7 +1169,8 @@ end},
             elseif delta / hum.MaxHealth < -0.5 then
                 chat("ARGGH!!")
             else
-                chat(({"OW!", "OUCH!", "AGH!"})[math.random(1,3)])
+                local msgs = {"OW!", "OUCH!", "AGH!"}
+                chat(msgs[math.random(1, #msgs)])
             end
         elseif delta > 0 then
             chat("Ah yes...")
@@ -1182,18 +1190,19 @@ end},
     -- Nearby chat insults
     local chatConn
     chatConn = TextChatService.OnIncomingMessage:Connect(function(msgObj)
-        local sender = msgObj.TextSource and msgObj.TextSource.UserId
+        local senderId = msgObj.TextSource and msgObj.TextSource.UserId
         local content = msgObj.Text
-        if not sender or sender == lp.UserId then return end
+        if not senderId or senderId == lp.UserId then return end
 
-        local insults = {"U suck","shut up","stfu","syfm","sybau"}
+        local insults = {"u suck","shut up","stfu","syfm","sybau"}
         for _, insult in pairs(insults) do
-            if string.find(string.lower(content), insult:lower()) then
-                local player = Players:GetPlayerByUserId(sender)
+            if string.find(string.lower(content), insult) then
+                local player = Players:GetPlayerByUserId(senderId)
                 if player and (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) then
                     local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
                     if dist <= 10 then
-                        chat({":(", "Rude.", "Aw man.", "..."}[math.random(1,4)])
+                        local responses = {":(", "Rude.", "Aw man.", "..."}
+                        chat(responses[math.random(1,#responses)])
                         break
                     end
                 end
