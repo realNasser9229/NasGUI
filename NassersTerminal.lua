@@ -17,7 +17,7 @@ gui.ResetOnSpawn = false
 
 local toggleFrame = Instance.new("Frame", gui)
 toggleFrame.Size = UDim2.new(0, 135, 0, 35)
-toggleFrame.Position = UDim2.new(1, -145, 1, -45)
+toggleFrame.Position = UDim2.new(1, -255, 1, -45)
 toggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 toggleFrame.BorderSizePixel = 1
 
