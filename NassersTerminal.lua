@@ -1162,8 +1162,7 @@ end},
             elseif delta / hum.MaxHealth < -0.5 then
                 chat("ARGGH!!")
             else
-                local msgs = {"OW!", "OUCH!", "AGH!"}
-chat(msgs[math.random(1,#msgs)])
+                chat(({"OW!", "OUCH!", "AGH!"})[math.random(1,3)])
             end
         elseif delta > 0 then
             chat("Ah yes...")
