@@ -16,13 +16,13 @@ gui.ResetOnSpawn = false
 ----------------------------------------------------------------------
 
 local toggleFrame = Instance.new("Frame", gui)
-toggleFrame.Size = UDim2.new(0, 135, 0, 35)
+toggleFrame.Size = UDim2.new(0, 250, 0, 35)
 toggleFrame.Position = UDim2.new(1, -255, 1, -45)
 toggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 toggleFrame.BorderSizePixel = 1
 
 local toggleBtn = Instance.new("TextButton", toggleFrame)
-toggleBtn.Size = UDim2.new(0, 250, 1, 0)
+toggleBtn.Size = UDim2.new(1, 0, 1, 0) -- fills the frame
 toggleBtn.BackgroundTransparency = 1
 toggleBtn.Text = "Nasser's Terminal v1.0"
 toggleBtn.TextColor3 = Color3.new(1,1,1)
