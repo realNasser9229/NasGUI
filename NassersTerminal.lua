@@ -22,9 +22,9 @@ toggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 toggleFrame.BorderSizePixel = 1
 
 local toggleBtn = Instance.new("TextButton", toggleFrame)
-toggleBtn.Size = UDim2.new(0, 100, 1, 0)
+toggleBtn.Size = UDim2.new(0, 250, 1, 0)
 toggleBtn.BackgroundTransparency = 1
-toggleBtn.Text = "Nasser's Terminal v1.0.0"
+toggleBtn.Text = "Nasser's Terminal v1.0"
 toggleBtn.TextColor3 = Color3.new(1,1,1)
 toggleBtn.Font = Enum.Font.Code
 toggleBtn.TextSize = 16
