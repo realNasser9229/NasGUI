@@ -530,49 +530,36 @@ end
 
 
 -- =========================
--- PLUGIN SYSTEM FOR NasGUI v2.3
+-- PLUGIN SYSTEM FOR NasGUI
 -- =========================
 
--- 1️⃣ Create Plugins container
-local containerPlugins = Instance.new("Frame", mainFrame)
-containerPlugins.Size = UDim2.new(1, 0, 1, -100)      -- leave enough space for tabs & margin
-containerPlugins.Position = UDim2.new(0, 0, 0, 100)   -- start far below the top
-containerPlugins.BackgroundTransparency = 1
-containerPlugins.Visible = false
-containerPlugins.ZIndex = 1
+-- 1️⃣ Make sure Plugins container exists and is hidden by default
+containerClientServer.Visible = false  -- this is your Plugins container
+containerClientServer.BackgroundTransparency = 1
+containerClientServer.ZIndex = 1
 
 -- 2️⃣ Create scrolling frame inside Plugins container
-local scrollPlugins = Instance.new("ScrollingFrame", containerPlugins)
-scrollPlugins.Size = UDim2.new(1, -20, 1, 0)  -- fills container
-scrollPlugins.Position = UDim2.new(0, 10, 0, 0)
+local scrollPlugins = Instance.new("ScrollingFrame", containerClientServer)
+scrollPlugins.Size = UDim2.new(1, -20, 1, -50) -- smaller than full frame so tab buttons don't overlap
+scrollPlugins.Position = UDim2.new(0, 10, 0, 40) -- pushed lower so tabs remain clickable
 scrollPlugins.BackgroundTransparency = 1
 scrollPlugins.ScrollBarThickness = 5
+scrollPlugins.ScrollBarImageColor3 = Color3.fromRGB(102, 0, 0)
 scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollPlugins.ZIndex = 2
 
--- UIListLayout for plugin buttons
-local pluginLayout = Instance.new("UIListLayout", scrollPlugins)
-pluginLayout.Padding = UDim.new(0, 10)
-pluginLayout.SortOrder = Enum.SortOrder.LayoutOrder
+local pluginsLayout = Instance.new("UIListLayout", scrollPlugins)
+pluginsLayout.Padding = UDim.new(0, 10)
+pluginsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Auto-adjust canvas size whenever buttons are added
-pluginLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginLayout.AbsoluteContentSize.Y + 10)
-end)
-
--- 3️⃣ Add the Plugins tab button
+-- 3️⃣ Tab Button for Plugins (keep your existing tab buttons, just ensure this one toggles visibility)
 createTabButton("Plugins", 330, function()
-    -- Hide all other containers
     containerMain.Visible = false
     containerExec.Visible = false
     containerMisc.Visible = false
-    containerClientServer.Visible = false
-    
-    -- Show only plugins
-    containerPlugins.Visible = true
+    containerClientServer.Visible = true
 end)
 
--- 4️⃣ Helper to create plugin buttons
+-- 4️⃣ Helper to create plugin buttons inside scrollPlugins
 local function AddPlugin(name, callback)
     local btn = Instance.new("TextButton", scrollPlugins)
     btn.Size = UDim2.new(1, -20, 0, 40)
@@ -581,18 +568,18 @@ local function AddPlugin(name, callback)
     btn.BackgroundColor3 = Color3.fromRGB(128, 0, 0)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.Gotham
-    btn.ZIndex = 2
+    btn.ZIndex = 1
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 5️⃣ Loader to read all .nas plugins
+-- 5️⃣ Loader to get all .nas plugins
 local function LoadPlugins()
     local list = {}
 
     if not isfolder("NasPlugins") then
         makefolder("NasPlugins")
-        writefile("NasPlugins/README.txt", "Put your .nas plugin files here as tables with Name, Author, Run()")
+        writefile("NasPlugins/README.txt", "Put your .nas plugins here as tables with Name, Author, Run()")
     end
 
     for _, file in ipairs(listfiles("NasPlugins")) do
@@ -609,7 +596,7 @@ local function LoadPlugins()
     return list
 end
 
--- 6️⃣ Load plugins and create buttons
+-- 6️⃣ Load plugins and generate buttons
 local Plugins = LoadPlugins() or {}
 
 if type(Plugins) == "table" and #Plugins > 0 then
@@ -620,6 +607,10 @@ if type(Plugins) == "table" and #Plugins > 0 then
     end
 end
 
+-- 7️⃣ Auto-adjust canvas size for scrollPlugins
+pluginsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollPlugins.CanvasSize = UDim2.new(0, 0, 0, pluginsLayout.AbsoluteContentSize.Y + 10)
+end)
 
 -- Main Tab Buttons
 local buttons = {
