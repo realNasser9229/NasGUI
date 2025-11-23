@@ -213,9 +213,696 @@ commands.clear = function(args)
 end
 
 -- Command: Exit
-commands.exit = function(args)
+commands.destroy = function(args)
     ScreenGui:Destroy()
     return true, "Goodbye."
+end
+
+-- Command: Heal
+commands.heal = function(args)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") then
+        return false, "Error: Humanoid not found."
+    end
+
+    char.Humanoid.Health = char.Humanoid.MaxHealth
+    return true, "Health restored."
+end
+
+-------------------------------------------------------------------
+-- PLAYER HEALTH COMMANDS
+-------------------------------------------------------------------
+
+commands.health = function(args)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") then
+        return false, "Error: Humanoid not found."
+    end
+    if not tonumber(args[1]) then return false, "Usage: health [number]" end
+    char.Humanoid.Health = tonumber(args[1])
+    return true, "Health set to " .. args[1]
+end
+
+commands.maxhealth = function(args)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") then
+        return false, "Error: Humanoid not found."
+    end
+    if not tonumber(args[1]) then return false, "Usage: maxhealth [number]" end
+    char.Humanoid.MaxHealth = tonumber(args[1])
+    return true, "MaxHealth set to " .. args[1]
+end
+
+commands.reset = function(args)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.Health = 0
+        return true, "Character reset."
+    end
+    return false, "Reset failed."
+end
+
+commands.refresh = function(args)
+    LocalPlayer:LoadCharacter()
+    return true, "Character refreshed."
+end
+
+-------------------------------------------------------------------
+-- MOVEMENT + FUN COMMANDS
+-------------------------------------------------------------------
+
+commands.fly = function(args)
+    local speed = tonumber(args[1]) or 2
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false, "Error: HRP missing."
+    end
+    
+    if _G.NasFlyRunning then return false, "Already flying." end
+    _G.NasFlyRunning = true
+
+    local hrp = char.HumanoidRootPart
+    local UIS = game:GetService("UserInputService")
+
+    task.spawn(function()
+        while _G.NasFlyRunning do
+            local v = Vector3.zero
+            if UIS:IsKeyDown(Enum.KeyCode.W) then v += hrp.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then v -= hrp.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then v -= hrp.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then v += hrp.CFrame.RightVector end
+
+            hrp.Velocity = v * (speed * 50)
+            task.wait()
+        end
+        hrp.Velocity = Vector3.zero
+    end)
+
+    return true, "Fly enabled (Speed: " .. speed .. ")"
+end
+
+commands.unfly = function(args)
+    _G.NasFlyRunning = false
+    return true, "Fly disabled."
+end
+
+commands.spin = function(args)
+    local speed = tonumber(args[1]) or 5
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "Error: HRP not found." end
+
+    _G.NasSpin = true
+    task.spawn(function()
+        while _G.NasSpin do
+            hrp.CFrame *= CFrame.Angles(0, math.rad(speed), 0)
+            task.wait()
+        end
+    end)
+    return true, "Spin enabled."
+end
+
+commands.unspin = function(args)
+    _G.NasSpin = false
+    return true, "Spin disabled."
+end
+
+commands.btools = function(args)
+    for _, t in ipairs({"HopperBin", "HopperBin", "HopperBin"}) do
+        local bin = Instance.new("HopperBin", LocalPlayer.Backpack)
+        bin.BinType = Enum.BinType[t == 1 and "Clone" or t == 2 and "GameTool" or "Hammer"]
+    end
+    return true, "BTools granted."
+end
+
+commands.jump = function(args)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.Jump = true return true, "Jumped." end
+    return false, "No Humanoid."
+end
+
+-------------------------------------------------------------------
+-- CAMERA / VIEW COMMANDS
+-------------------------------------------------------------------
+
+commands.fov = function(args)
+    local cam = workspace.CurrentCamera
+    if not tonumber(args[1]) then return false, "Usage: fov [number]" end
+    cam.FieldOfView = tonumber(args[1])
+    return true, "FOV set."
+end
+
+commands.view = function(args)
+    if not args[1] then return false, "Usage: view [player]" end
+    local target
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1, #args[1]:lower()) == args[1]:lower() then
+            target = p
+            break
+        end
+    end
+    if not target or not target.Character then return false, "Player not found." end
+    workspace.CurrentCamera.CameraSubject = target.Character:FindFirstChild("Humanoid")
+    return true, "Viewing " .. target.Name
+end
+
+commands.unview = function(args)
+    workspace.CurrentCamera.CameraSubject = LocalPlayer.Character:FindFirstChild("Humanoid")
+    return true, "Camera reset."
+end
+
+-------------------------------------------------------------------
+-- COSMETIC / VISUAL COMMANDS
+-------------------------------------------------------------------
+
+commands.invisible = function(args)
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then v.Transparency = 1 end
+    end
+    return true, "Invisible."
+end
+
+commands.visible = function(args)
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then v.Transparency = 0 end
+    end
+    return true, "Visible again."
+end
+
+commands.headless = function(args)
+    local head = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+    if head then head.Transparency = 1 return true, "Head hidden." end
+    return false, "No head found."
+end
+
+commands.charcolor = function(args)
+    if #args < 3 then return false, "Usage: charcolor r g b" end
+    local r, g, b = tonumber(args[1]), tonumber(args[2]), tonumber(args[3])
+    if not (r and g and b) then return false, "Invalid RGB." end
+    
+    for _, p in pairs(LocalPlayer.Character:GetChildren()) do
+        if p:IsA("BasePart") then
+            p.Color = Color3.new(r/255, g/255, b/255)
+        end
+    end
+    return true, "Character recolored."
+end
+
+-------------------------------------------------------------------
+-- UTILITY COMMANDS
+-------------------------------------------------------------------
+
+commands.time = function(args)
+    if not tonumber(args[1]) then return false, "Usage: time [number]" end
+    game.Lighting.ClockTime = tonumber(args[1])
+    return true, "Time set."
+end
+
+commands.notify = function(args)
+    local msg = table.concat(args, " ")
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Terminal";
+        Text = msg ~= "" and msg or "No message";
+        Duration = 3;
+    })
+    return true, "Notification sent."
+end
+
+commands.playsound = function(args)
+    if not tonumber(args[1]) then return false, "Usage: playsound [id]" end
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://" .. args[1]
+    s.Volume = 1
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 5)
+    return true, "Playing sound ID " .. args[1]
+end
+
+commands.cmds = function(args)
+    local names = {}
+    for k,_ in pairs(commands) do table.insert(names, k) end
+    table.sort(names)
+    return true, "Commands: " .. table.concat(names, ", ")
+end
+
+-------------------------------------------------------------------
+-- EXTRA SAFETY / ANTI VOID
+-------------------------------------------------------------------
+
+commands.antivoid = function(args)
+    _G.NasAntiVoid = true
+    task.spawn(function()
+        while _G.NasAntiVoid do
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and hrp.Position.Y < -10 then
+                hrp.CFrame = CFrame.new(hrp.Position.X, 5, hrp.Position.Z)
+            end
+            task.wait(0.2)
+        end
+    end)
+    return true, "Anti-void enabled."
+end
+
+commands.unantivoid = function(args)
+    _G.NasAntiVoid = false
+    return true, "Anti-void disabled."
+end
+
+-------------------------------------------------------------------
+-- PLAYER CONTROL / FUN
+-------------------------------------------------------------------
+
+commands.dance = function(args)
+    local speed = tonumber(args[1]) or 1.6
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then return false, "Humanoid not found." end
+
+    if hum.RigType == Enum.HumanoidRigType.R6 then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://140290021376754"
+        _G.NasDanceTrack = hum:LoadAnimation(anim)
+        _G.NasDanceTrack:Play()
+        _G.NasDanceTrack:AdjustSpeed(speed)
+        return true, "Dance started (R6) at speed " .. speed
+    else
+        return false, "Dance only works on R6."
+    end
+end
+
+commands.undance = function(args)
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    local hum = char:FindFirstChild("Humanoid")
+    if hum and _G.NasDanceTrack then
+        _G.NasDanceTrack:Stop()
+        _G.NasDanceTrack = nil
+        return true, "Dance stopped."
+    end
+    return false, "No dance active."
+end
+
+commands.sittoggle = function(args)
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not hum then return false, "Humanoid not found." end
+    hum.Sit = not hum.Sit
+    return true, hum.Sit and "You are now sitting." or "You are now standing."
+end
+
+commands.ragdoll = function(args)
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("Motor6D") then
+            v:Destroy()
+        end
+    end
+    return true, "Ragdoll activated."
+end
+
+commands.unragdoll = function(args)
+    LocalPlayer:LoadCharacter()
+    return true, "Ragdoll removed, character respawned."
+end
+
+commands.floatpad = function(args)
+    local char = LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP not found." end
+    local pad = Instance.new("Part")
+    pad.Size = Vector3.new(6,1,6)
+    pad.Transparency = 1
+    pad.Anchored = true
+    pad.CanCollide = true
+    pad.CFrame = hrp.CFrame - Vector3.new(0,3,0)
+    pad.Name = "NasFloatPad"
+    pad.Parent = workspace
+    hrp.CFrame = hrp.CFrame + Vector3.new(0,3,0)
+    return true, "Float pad created."
+end
+
+commands.slide = function(args)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP not found." end
+    hrp.Velocity = hrp.CFrame.LookVector * 50
+    return true, "Sliding forward."
+end
+
+commands.spinwalk = function(args)
+    local speed = tonumber(args[1]) or 5
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP not found." end
+
+    _G.NasSpinWalk = true
+    task.spawn(function()
+        while _G.NasSpinWalk do
+            hrp.CFrame *= CFrame.Angles(0, math.rad(speed), 0)
+            task.wait()
+        end
+    end)
+    return true, "Spinwalk activated."
+end
+
+commands.superjump = function(args)
+    local height = tonumber(args[1]) or 100
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not hum then return false, "Humanoid not found." end
+    hum.JumpPower = height
+    hum.Jump = true
+    return true, "Superjump activated ("..height..")."
+end
+
+-------------------------------------------------------------------
+-- PLAYER APPEARANCE / VISUALS
+-------------------------------------------------------------------
+
+commands.hat = function(args)
+    local id = tonumber(args[1])
+    if not id then return false, "Usage: hat [assetid]" end
+    local hat = Instance.new("Accessory")
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshId = "rbxassetid://"..id
+    mesh.Parent = hat
+    hat.Parent = LocalPlayer.Character
+    return true, "Hat added."
+end
+
+commands.removehats = function(args)
+    for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+        if v:IsA("Accessory") then v:Destroy() end
+    end
+    return true, "All hats removed."
+end
+
+commands.trail = function(args)
+    local color = args[1] or "Bright red"
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP not found." end
+    local trail = Instance.new("Trail", hrp)
+    trail.Color = ColorSequence.new(Color3.fromRGB(255,0,0))
+    trail.Lifetime = 1
+    return true, "Trail created."
+end
+
+commands.lights = function(args)
+    local color = Color3.fromRGB(tonumber(args[1]) or 255, tonumber(args[2]) or 255, tonumber(args[3]) or 255)
+    local light = Instance.new("PointLight", LocalPlayer.Character:FindFirstChild("Torso") or LocalPlayer.Character:FindFirstChild("UpperTorso"))
+    light.Color = color
+    light.Brightness = 2
+    light.Range = 15
+    return true, "Light added to character."
+end
+
+commands.glow = function(args)
+    local color = Color3.fromRGB(tonumber(args[1]) or 255, tonumber(args[2]) or 255, tonumber(args[3]) or 255)
+    for _, p in pairs(LocalPlayer.Character:GetChildren()) do
+        if p:IsA("BasePart") then
+            local box = Instance.new("SelectionBox", p)
+            box.Adornee = p
+            box.Color3 = color
+        end
+    end
+    return true, "Glow effect applied."
+end
+
+commands.smoke = function(args)
+    for _, p in pairs(LocalPlayer.Character:GetChildren()) do
+        if p:IsA("BasePart") then
+            local s = Instance.new("Smoke", p)
+            s.RiseVelocity = 2
+            s.Size = 5
+        end
+    end
+    return true, "Smoke added to character."
+end
+
+commands.fire = function(args)
+    for _, p in pairs(LocalPlayer.Character:GetChildren()) do
+        if p:IsA("BasePart") then
+            local f = Instance.new("Fire", p)
+            f.Heat = 5
+            f.Size = 5
+        end
+    end
+    return true, "Fire added to character."
+end
+
+commands.sparkles = function(args)
+    for _, p in pairs(LocalPlayer.Character:GetChildren()) do
+        if p:IsA("BasePart") then
+            Instance.new("Sparkles", p)
+        end
+    end
+    return true, "Sparkles added to character."
+end
+
+-------------------------------------------------------------------
+-- ENVIRONMENT / WORLD
+-------------------------------------------------------------------
+
+commands.gravityup = function(args)
+    local n = tonumber(args[1]) or 196.2
+    workspace.Gravity = n
+    return true, "Gravity set to "..n
+end
+
+commands.gravitydown = function(args)
+    local n = tonumber(args[1]) or 50
+    workspace.Gravity = n
+    return true, "Gravity set to "..n
+end
+
+commands.day = function(args)
+    game.Lighting.ClockTime = 14
+    return true, "Time set to day."
+end
+
+commands.night = function(args)
+    game.Lighting.ClockTime = 2
+    return true, "Time set to night."
+end
+
+commands.fog = function(args)
+    local startFog = tonumber(args[1]) or 0
+    local endFog = tonumber(args[2]) or 100
+    game.Lighting.FogStart = startFog
+    game.Lighting.FogEnd = endFog
+    return true, "Fog applied."
+end
+
+commands.clearfog = function(args)
+    game.Lighting.FogEnd = 100000
+    game.Lighting.FogStart = 0
+    return true, "Fog cleared."
+end
+
+commands.lighting = function(args)
+    local preset = args[1] or "bright"
+    if preset == "bright" then
+        game.Lighting.Brightness = 2
+        game.Lighting.OutdoorAmbient = Color3.new(1,1,1)
+    elseif preset == "dark" then
+        game.Lighting.Brightness = 0.3
+        game.Lighting.OutdoorAmbient = Color3.new(0.1,0.1,0.1)
+    elseif preset == "cool" then
+        game.Lighting.Brightness = 1
+        game.Lighting.OutdoorAmbient = Color3.new(0,0.5,1)
+    elseif preset == "warm" then
+        game.Lighting.Brightness = 1
+        game.Lighting.OutdoorAmbient = Color3.new(1,0.5,0)
+    end
+    return true, "Lighting preset applied: "..preset
+end
+
+-------------------------------------------------------------------
+-- PLAYER INTERACTION / UTILITY
+-------------------------------------------------------------------
+
+commands.tp = function(args)
+    if not args[1] then return false, "Usage: tp [player]" end
+    local target
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then
+            target = p
+            break
+        end
+    end
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return false, "Player not found." end
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP not found." end
+    hrp.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+    return true, "Teleported to "..target.Name
+end
+
+commands.bring = function(args)
+    if not args[1] then return false, "Usage: bring [player]" end
+    local target
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then
+            target = p
+            break
+        end
+    end
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return false, "Player not found." end
+    local hrp = target.Character.HumanoidRootPart
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return false, "Your HRP not found." end
+    hrp.CFrame = myHRP.CFrame + Vector3.new(0,3,0)
+    return true, "Brought "..target.Name.." near you."
+end
+
+commands.track = function(args)
+    if not args[1] then return false, "Usage: track [player]" end
+    local target
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then
+            target = p
+            break
+        end
+    end
+    if not target or not target.Character then return false, "Player not found." end
+    local part = Instance.new("Part")
+    part.Anchored = true
+    part.CanCollide = false
+    part.Size = Vector3.new(1,1,1)
+    part.Material = Enum.Material.Neon
+    part.Color = Color3.new(1,0,0)
+    part.Name = "NasTrack_"..target.Name
+    part.Parent = workspace
+    task.spawn(function()
+        while part.Parent do
+            if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                part.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+            end
+            task.wait(0.1)
+        end
+    end)
+    return true, "Tracking "..target.Name
+end
+
+commands.untrack = function(args)
+    for _, v in pairs(workspace:GetChildren()) do
+        if v.Name:match("NasTrack_") then v:Destroy() end
+    end
+    return true, "All tracking removed."
+end
+
+commands.closest = function(args)
+    local closest = nil
+    local dist = math.huge
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return false, "HRP not found." end
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (p.Character.HumanoidRootPart.Position - myHRP.Position).Magnitude
+            if d < dist then dist = d; closest = p end
+        end
+    end
+    if closest then return true, "Closest player: "..closest.Name.." ("..math.floor(dist).." studs)" end
+    return false, "No players found."
+end
+
+commands.distance = function(args)
+    if not args[1] then return false, "Usage: distance [player]" end
+    local target
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return false, "HRP not found." end
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then target = p break end
+    end
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return false, "Player not found." end
+    local d = (target.Character.HumanoidRootPart.Position - myHRP.Position).Magnitude
+    return true, "Distance to "..target.Name..": "..math.floor(d).." studs"
+end
+
+-------------------------------------------------------------------
+-- AUDIO / FUN
+-------------------------------------------------------------------
+
+commands.music = function(args)
+    if not tonumber(args[1]) then return false, "Usage: music [id]" end
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://"..args[1]
+    s.Looped = true
+    s.Volume = 1
+    s.Name = "NasMusic"
+    s:Play()
+    return true, "Music started (ID: "..args[1]..")"
+end
+
+commands.stopmusic = function(args)
+    for _, s in pairs(workspace:GetChildren()) do
+        if s:IsA("Sound") and s.Name == "NasMusic" then s:Stop(); s:Destroy() end
+    end
+    return true, "Music stopped."
+end
+
+commands.jumpboom = function(args)
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://12222225" -- example placeholder
+    s.Volume = 1
+    s:Play()
+    game:GetService("Debris"):AddItem(s,5)
+    return true, "Jump sound played."
+end
+
+commands.stepboom = function(args)
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://12222226" -- example placeholder
+    s.Volume = 1
+    s:Play()
+    game:GetService("Debris"):AddItem(s,5)
+    return true, "Step sound played."
+end
+
+-------------------------------------------------------------------
+-- CAMERA / SCREEN EFFECTS
+-------------------------------------------------------------------
+
+commands.shake = function(args)
+    local cam = workspace.CurrentCamera
+    local intensity = tonumber(args[1]) or 1
+    local orig = cam.CFrame
+    task.spawn(function()
+        for i=1,10 do
+            cam.CFrame = cam.CFrame * CFrame.new(Vector3.new(math.random()*intensity,math.random()*intensity,0))
+            task.wait(0.05)
+        end
+        cam.CFrame = orig
+    end)
+    return true, "Camera shake done."
+end
+
+commands.follow = function(args)
+    if not args[1] then return false, "Usage: follow [player]" end
+    local target
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then target = p break end
+    end
+    if not target or not target.Character or not target.Character:FindFirstChild("Humanoid") then return false, "Player not found." end
+    workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
+    return true, "Camera following "..target.Name
+end
+
+commands.unfollow = function(args)
+    workspace.CurrentCamera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    return true, "Camera reset to self."
+end
+
+commands.invert = function(args)
+    local cam = workspace.CurrentCamera
+    local blur = Instance.new("ColorCorrectionEffect", cam)
+    blur.TintColor = Color3.new(1,1,1) - Color3.new(1,1,1)
+    task.delay(0.2,function() blur:Destroy() end)
+    return true, "Screen inverted briefly."
 end
 
 -- 5. EXECUTION HANDLER
