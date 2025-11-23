@@ -352,52 +352,40 @@ end},
     local plr = Players.LocalPlayer
     local char = plr.Character or plr.CharacterAdded:Wait()
     local hum = char:FindFirstChild("Humanoid")
-    if not hum then 
-        return warn("[Terminal] No Humanoid found in your character.") 
+    if not hum then return warn("[Terminal] Humanoid not found.") end
+
+    -- R6 check
+    if hum.RigType ~= Enum.HumanoidRigType.R6 then
+        return warn("[Terminal] Dance animation only works on R6 avatars.")
     end
 
-    -- Only support R15
-    if hum.RigType ~= Enum.HumanoidRigType.R15 then
-        return warn("[Terminal] Dance command only works on R15 characters.")
-    end
-
-    local animSpeed = tonumber(args and args[1]) or 1.6
-    local animId = "rbxassetid://140290021376754" -- R6 animation ID, still works on R15
-
-    -- Load animation
-    local animator = hum:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = hum
-    end
-
+    -- Animation
     local anim = Instance.new("Animation")
-    anim.AnimationId = animId
+    anim.AnimationId = "rbxassetid://140290021376754"
+    local speed = tonumber(args and args[1]) or 1.6
 
-    local track = animator:LoadAnimation(anim)
-    track:Play()
-    track:AdjustSpeed(animSpeed)
+    -- Stop previous dance if any
+    if getgenv().NAS_DANCE_TRACK then
+        getgenv().NAS_DANCE_TRACK:Stop()
+        getgenv().NAS_DANCE_TRACK = nil
+    end
 
-    print("[Terminal] Dance animation played at speed "..animSpeed)
+    local track = hum:LoadAnimation(anim)
+    track.Priority = Enum.AnimationPriority.Action
+    track:Play(0, 1, speed)
+    getgenv().NAS_DANCE_TRACK = track
+
+    print("[Terminal] Dance animation playing at speed "..speed)
 end},
 
 {"undance", function()
-    local Players = game:GetService("Players")
-    local plr = Players.LocalPlayer
-    local char = plr.Character
-    if not char then return end
-    local hum = char:FindFirstChild("Humanoid")
-    if not hum then return end
-
-    local animator = hum:FindFirstChildOfClass("Animator")
-    if not animator then return end
-
-    -- Stop all currently playing animations
-    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-        track:Stop()
+    if getgenv().NAS_DANCE_TRACK then
+        getgenv().NAS_DANCE_TRACK:Stop()
+        getgenv().NAS_DANCE_TRACK = nil
+        print("[Terminal] Dance animation stopped.")
+    else
+        print("[Terminal] No active dance animation.")
     end
-
-    print("[Terminal] Dance animation stopped.")
 end},
 
 {"fireclickdetectors", function(args)
