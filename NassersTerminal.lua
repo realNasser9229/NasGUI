@@ -35,6 +35,13 @@ local states = {
     flyBodyVelocity = nil,
     flyBodyGyro = nil
 }
+-- State management for fly loops
+local flyState = {
+    connection = nil,
+    bv = nil,
+    bg = nil
+}
+
 
 -- Helper: Find a player by partial name (e.g. "nas" -> "Nasser")
 local function getPlayer(partialName)
@@ -263,17 +270,29 @@ commands.clip = function(args)
     return false, "Noclip is not active."
 end
 
--- 4. FLY (Simple Velocity Fly)
--- Usage: fly
+-- COMMAND: FLY (Mobile & PC Friendly)
+-- Usage: fly [speed] (optional number, default 50)
 commands.fly = function(args)
+    -- 1. Reset if already flying
+    if flyState.connection then commands.unfly({}) end
+
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return false, "Character not found." end
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum then return false, "Character missing." end
 
-    if states.flyBodyVelocity then commands.unfly({}) end -- Reset if already flying
+    -- 2. Setup Speed
+    local speed = 50
+    if args[1] and tonumber(args[1]) then
+        speed = tonumber(args[1])
+    end
 
+    -- 3. Enable PlatformStand (Stops animations/gravity physics)
+    hum.PlatformStand = true
+
+    -- 4. Create Physics Movers
     local bv = Instance.new("BodyVelocity", root)
-    bv.Velocity = Vector3.new(0,0,0)
+    bv.Velocity = Vector3.zero
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     
     local bg = Instance.new("BodyGyro", root)
@@ -281,45 +300,58 @@ commands.fly = function(args)
     bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bg.CFrame = root.CFrame
 
-    states.flyBodyVelocity = bv
-    states.flyBodyGyro = bg
+    flyState.bv = bv
+    flyState.bg = bg
 
-    -- Loop to update fly position based on camera
-    task.spawn(function()
-        while states.flyBodyVelocity do
-            local cam = workspace.CurrentCamera
-            local speed = 50
-            local moveDir = Vector3.new(0,0,0)
-            
-            -- Basic WASD check (using ControlModule would be cleaner, but this is simpler for raw executor)
-            local isMoving = false
-            -- Note: This basic fly moves where your camera looks. 
-            -- For a full fly you usually hook into InputService keys, but this keeps the script shorter.
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
-            
-            bg.CFrame = cam.CFrame
-            bv.Velocity = moveDir * speed
-            task.wait()
+    -- 5. Start Loop (Heartbeat is better for physics)
+    flyState.connection = RunService.Heartbeat:Connect(function()
+        if not char.Parent or not root.Parent then
+            commands.unfly({}) -- Safety cutoff
+            return 
         end
+        
+        local cam = workspace.CurrentCamera
+        local moveDir = Vector3.zero
+        local inputFound = false
+
+        -- [[ PC CONTROLS ]]
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) inputFound = true end
+
+        -- [[ MOBILE CONTROLS ]]
+        -- If no keyboard keys pressed, check Mobile Thumbstick (MoveDirection)
+        if not inputFound and hum.MoveDirection.Magnitude > 0 then
+            -- On mobile, if they push the stick, fly in the direction the CAMERA is facing
+            moveDir = cam.CFrame.LookVector
+            inputFound = true
+        end
+
+        -- Update Physics
+        bg.CFrame = cam.CFrame -- Character always looks at camera direction
+        bv.Velocity = moveDir * speed
     end)
 
-    return true, "Fly ENABLED (W,A,S,D, Space, Ctrl)"
+    return true, "Fly ENABLED (Speed: "..speed..")"
 end
 
--- 5. UNFLY
+-- COMMAND: UNFLY
 -- Usage: unfly
 commands.unfly = function(args)
-    if states.flyBodyVelocity then states.flyBodyVelocity:Destroy() end
-    if states.flyBodyGyro then states.flyBodyGyro:Destroy() end
-    states.flyBodyVelocity = nil
-    states.flyBodyGyro = nil
-    
-    -- Restore gravity feel
+    -- 1. Disconnect Loop
+    if flyState.connection then
+        flyState.connection:Disconnect()
+        flyState.connection = nil
+    end
+
+    -- 2. Destroy Physics Objects
+    if flyState.bv then flyState.bv:Destroy() flyState.bv = nil end
+    if flyState.bg then flyState.bg:Destroy() flyState.bg = nil end
+
+    -- 3. Disable PlatformStand (Resume normal walking)
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.PlatformStand = false
