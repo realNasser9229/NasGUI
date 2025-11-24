@@ -1368,7 +1368,55 @@ commands.unfollow = function(args)
     return true, "Camera reset to self."
 end
 
+-- ============================================
+-- PLUGIN SYSTEM FOR TERMINAL
+-- ============================================
 
+-- Assumes `commands` table already exists above
+-- Must be placed AFTER `commands = {}` but BEFORE InputBox execution logic
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local pluginFolder = ReplicatedStorage:FindFirstChild("TerminalPlugins")
+
+if pluginFolder then
+    for _, plugin in ipairs(pluginFolder:GetChildren()) do
+        local success, pluginCommands = pcall(function()
+            return require(plugin)  -- ModuleScript or .terminal returning table of commands
+        end)
+
+        if success and type(pluginCommands) == "table" then
+            for cmdName, cmdFunc in pairs(pluginCommands) do
+                -- Merge plugin commands into main commands table
+                commands[cmdName] = cmdFunc
+            end
+            print("[Terminal] Loaded plugin: "..plugin.Name)
+        else
+            warn("[Terminal] Failed to load plugin: "..plugin.Name)
+        end
+    end
+else
+    warn("[Terminal] No TerminalPlugins folder found in ReplicatedStorage")
+end
+
+-- Optional: Add a command to reload plugins on demand
+commands.reloadplugins = function(args)
+    -- Clear old plugin commands first
+    if pluginFolder then
+        for _, plugin in ipairs(pluginFolder:GetChildren()) do
+            local ok, pluginCommands = pcall(function()
+                return require(plugin)
+            end)
+            if ok and type(pluginCommands) == "table" then
+                for cmdName, cmdFunc in pairs(pluginCommands) do
+                    commands[cmdName] = cmdFunc
+                end
+            end
+        end
+        return true, "Plugins reloaded."
+    else
+        return false, "No plugin folder found."
+    end
+end
 
 -- 5. EXECUTION HANDLER
 
