@@ -17,6 +17,9 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 -- Check for existing GUI to prevent duplicates
@@ -24,6 +27,26 @@ if game.CoreGui:FindFirstChild("NassersTerminal") then
     game.CoreGui.NassersTerminal:Destroy()
 elseif LocalPlayer.PlayerGui:FindFirstChild("NassersTerminal") then
     LocalPlayer.PlayerGui.NassersTerminal:Destroy()
+end
+
+-- State variables to manage toggles (like Noclip/Fly)
+local states = {
+    noclipConnection = nil,
+    flyBodyVelocity = nil,
+    flyBodyGyro = nil
+}
+
+-- Helper: Find a player by partial name (e.g. "nas" -> "Nasser")
+local function getPlayer(partialName)
+    if not partialName then return nil end
+    partialName = partialName:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():sub(1, #partialName) == partialName or 
+           (plr.DisplayName and plr.DisplayName:lower():sub(1, #partialName) == partialName) then
+            return plr
+        end
+    end
+    return nil
 end
 
 -- 1. UI CONSTRUCTION
@@ -195,24 +218,154 @@ commands.jp = function(args)
 end
 
 
-commands.console = function(args)
-    local UIS = game:GetService("UserInputService")
+-- 1. GOTO (Teleport to a player)
+-- Usage: goto [playername]
+commands.goto = function(args)
+    if #args < 1 then return false, "Usage: goto [player_name]" end
     
-    -- Simulate pressing F9
-    task.spawn(function()
-        UIS.InputBegan:Fire({KeyCode = Enum.KeyCode.F9}, false)
-    end)
-    
-    addLog("Attempting to open Dev Console...", Color3.fromRGB(200,200,255))
-    return true, "Console command executed."
+    local target = getPlayer(args[1])
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2)
+            return true, "Teleported to " .. target.Name
+        end
+    end
+    return false, "Error: Player not found or character missing."
 end
 
--- Command: Print
-commands.print = function(args)
-    local msg = table.concat(args, " ")
-    print(msg) -- Prints to real F9 console too
-    return true, "Output: " .. msg
+-- 2. NOCLIP (Walk through walls)
+-- Usage: noclip
+commands.noclip = function(args)
+    if states.noclipConnection then return false, "Noclip is already active." end
+    
+    states.noclipConnection = RunService.Stepped:Connect(function()
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+    return true, "Noclip ENABLED (Type 'clip' to disable)"
 end
+
+-- 3. CLIP (Disable Noclip)
+-- Usage: clip
+commands.clip = function(args)
+    if states.noclipConnection then
+        states.noclipConnection:Disconnect()
+        states.noclipConnection = nil
+        return true, "Noclip DISABLED"
+    end
+    return false, "Noclip is not active."
+end
+
+-- 4. FLY (Simple Velocity Fly)
+-- Usage: fly
+commands.fly = function(args)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return false, "Character not found." end
+
+    if states.flyBodyVelocity then commands.unfly({}) end -- Reset if already flying
+
+    local bv = Instance.new("BodyVelocity", root)
+    bv.Velocity = Vector3.new(0,0,0)
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    
+    local bg = Instance.new("BodyGyro", root)
+    bg.P = 9000
+    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bg.CFrame = root.CFrame
+
+    states.flyBodyVelocity = bv
+    states.flyBodyGyro = bg
+
+    -- Loop to update fly position based on camera
+    task.spawn(function()
+        while states.flyBodyVelocity do
+            local cam = workspace.CurrentCamera
+            local speed = 50
+            local moveDir = Vector3.new(0,0,0)
+            
+            -- Basic WASD check (using ControlModule would be cleaner, but this is simpler for raw executor)
+            local isMoving = false
+            -- Note: This basic fly moves where your camera looks. 
+            -- For a full fly you usually hook into InputService keys, but this keeps the script shorter.
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+            
+            bg.CFrame = cam.CFrame
+            bv.Velocity = moveDir * speed
+            task.wait()
+        end
+    end)
+
+    return true, "Fly ENABLED (W,A,S,D, Space, Ctrl)"
+end
+
+-- 5. UNFLY
+-- Usage: unfly
+commands.unfly = function(args)
+    if states.flyBodyVelocity then states.flyBodyVelocity:Destroy() end
+    if states.flyBodyGyro then states.flyBodyGyro:Destroy() end
+    states.flyBodyVelocity = nil
+    states.flyBodyGyro = nil
+    
+    -- Restore gravity feel
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.PlatformStand = false
+    end
+    
+    return true, "Fly DISABLED"
+end
+
+-- 6. BTOOLS (Give Building Tools)
+-- Usage: btools
+commands.btools = function(args)
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        local hammer = Instance.new("HopperBin")
+        hammer.Name = "Hammer"
+        hammer.BinType = Enum.BinType.Hammer
+        hammer.Parent = backpack
+
+        local clone = Instance.new("HopperBin")
+        clone.Name = "Clone"
+        clone.BinType = Enum.BinType.Clone
+        clone.Parent = backpack
+        
+        local grab = Instance.new("HopperBin")
+        grab.Name = "Grab"
+        grab.BinType = Enum.BinType.Grab
+        grab.Parent = backpack
+        
+        return true, "BTools added to Backpack."
+    end
+    return false, "Error: Backpack not found."
+end
+
+-- 10. REJOIN
+-- Usage: rj
+commands.rj = function(args)
+    if #Players:GetPlayers() <= 1 then
+        LocalPlayer:Kick("\nRejoining...")
+        task.wait()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    else
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end
+    return true, "Rejoining server..."
+end
+
 
 -- Command: Clear Log
 commands.clear = function(args)
@@ -240,6 +393,17 @@ commands.heal = function(args)
 
     char.Humanoid.Health = char.Humanoid.MaxHealth
     return true, "Health restored."
+end
+
+-- 7. FULLBRIGHT (See in the dark)
+-- Usage: fb
+commands.fb = function(args)
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    return true, "Fullbright ENABLED"
 end
 
 -------------------------------------------------------------------
@@ -494,22 +658,6 @@ commands.sittoggle = function(args)
     return true, hum.Sit and "You are now sitting." or "You are now standing."
 end
 
-commands.ragdoll = function(args)
-    local char = LocalPlayer.Character
-    if not char then return false, "Character not found." end
-    for _, v in pairs(char:GetChildren()) do
-        if v:IsA("Motor6D") then
-            v:Destroy()
-        end
-    end
-    return true, "Ragdoll activated."
-end
-
-commands.unragdoll = function(args)
-    LocalPlayer:LoadCharacter()
-    return true, "Ragdoll removed, character respawned."
-end
-
 commands.floatpad = function(args)
     local char = LocalPlayer.Character
     if not char then return false, "Character not found." end
@@ -531,7 +679,7 @@ commands.slide = function(args)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return false, "HRP not found." end
-    hrp.Velocity = hrp.CFrame.LookVector * 50
+    hrp.Velocity = hrp.CFrame.LookVector * 500
     return true, "Sliding forward."
 end
 
@@ -804,20 +952,6 @@ end
 -- CAMERA / SCREEN EFFECTS
 -------------------------------------------------------------------
 
-commands.shake = function(args)
-    local cam = workspace.CurrentCamera
-    local intensity = tonumber(args[1]) or 1
-    local orig = cam.CFrame
-    task.spawn(function()
-        for i=1,10 do
-            cam.CFrame = cam.CFrame * CFrame.new(Vector3.new(math.random()*intensity,math.random()*intensity,0))
-            task.wait(0.05)
-        end
-        cam.CFrame = orig
-    end)
-    return true, "Camera shake done."
-end
-
 commands.follow = function(args)
     if not args[1] then return false, "Usage: follow [player]" end
     local target
@@ -833,6 +967,8 @@ commands.unfollow = function(args)
     workspace.CurrentCamera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     return true, "Camera reset to self."
 end
+
+
 
 -- 5. EXECUTION HANDLER
 
