@@ -506,6 +506,273 @@ commands.jump = function(args)
     return false, "No Humanoid."
 end
 
+-- 7. SPIN FLING (Chaos mode)
+-- Usage: sfling
+commands.sfling = function(args)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return false, "Character missing." end
+    
+    commands.noclip({}) -- Auto noclip so you don't get stuck
+    
+    local bav = Instance.new("BodyAngularVelocity")
+    bav.Name = "FlingVelocity"
+    bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bav.AngularVelocity = Vector3.new(10000, 10000, 10000) -- EXTREME SPIN
+    bav.Parent = root
+    
+    return true, "SPIN FLING MODE ACTIVATED (Touch people to fling them)"
+end
+
+-- 8. UNFLING
+-- Usage: unfling
+commands.unsfling = function(args)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root and root:FindFirstChild("FlingVelocity") then
+        root.FlingVelocity:Destroy()
+        -- Stop physics rotation
+        root.RotVelocity = Vector3.zero
+        commands.clip({}) -- Turn collision back on
+        return true, "Spin Fling stopped."
+    end
+    return false, "You aren't flinging."
+end
+
+-- 9. HIPHEIGHT (Long Legs)
+-- Usage: hheight [number] (Default is usually 0 or 2)
+commands.hheight = function(args)
+    if #args < 1 then return false, "Usage: hh [number]" end
+    local height = tonumber(args[1])
+    
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.HipHeight = height
+        return true, "HipHeight set to " .. height
+    end
+    return false, "Humanoid not found."
+end
+
+-- 2. TIME
+-- Usage: time [hour] (0-24)
+commands.time = function(args)
+    if #args < 1 then return false, "Usage: time [hour] (0-24)" end
+    local hour = tonumber(args[1])
+    
+    if hour == nil or hour < 0 or hour > 24 then return false, "Error: Hour must be a number between 0 and 24." end
+    
+    -- This sets the time ONLY for the local player (client-side)
+    Lighting.ClockTime = hour
+    return true, "Time set to " .. string.format("%.1f", hour)
+end
+
+-- 3. INFINITE JUMP
+-- Usage: ij
+commands.ij = function(args)
+    if ijConnection then return false, "Infinite Jump is already active." end
+    
+    ijConnection = UserInputService.JumpRequest:Connect(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end)
+    return true, "Infinite Jump ENABLED (Press jump repeatedly)"
+end
+
+-- 4. UNINFINITE JUMP
+-- Usage: unij
+commands.unij = function(args)
+    if ijConnection then
+        ijConnection:Disconnect()
+        ijConnection = nil
+        return true, "Infinite Jump DISABLED."
+    end
+    return false, "Infinite Jump is not active."
+end
+
+-- 5. SIZE
+-- Usage: size [scale]
+commands.size = function(args)
+    if #args < 1 then return false, "Usage: size [scale] (e.g., 5 for giant, 0.5 for small)" end
+    local scale = tonumber(args[1])
+    
+    if scale == nil or scale <= 0 then return false, "Error: Scale must be a positive number." end
+    
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:Resize(scale) -- Attempts to resize the character components
+            return true, "Character size set to scale " .. scale
+        end
+    end
+    return false, "Character or Humanoid not found."
+end
+
+-- 6. FORCEFIELD (Makes you immune to fall damage/knockback visually)
+-- Usage: ff
+commands.ff = function(args)
+    local char = LocalPlayer.Character
+    if char then
+        if char:FindFirstChild("ForceField") then
+            return false, "ForceField is already active."
+        end
+        local ff = Instance.new("ForceField")
+        ff.Parent = char
+        return true, "ForceField ENABLED."
+    end
+    return false, "Character not found."
+end
+
+-- 7. UNFORCEFIELD
+-- Usage: unff
+commands.unff = function(args)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("ForceField") then
+        char.ForceField:Destroy()
+        return true, "ForceField DISABLED."
+    end
+    return false, "ForceField is not active."
+end
+
+local currentSpamConnection = nil
+local currentAuraPart = nil
+local ctpConnection = nil -- Click Teleport state
+
+-- 1. GOD MODE (Infinite Health)
+-- Usage: god
+commands.god = function(args)
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not hum then return false, "Character missing." end
+
+    -- Set max health high and constantly heal
+    hum.MaxHealth = math.huge
+    hum.Health = math.huge
+
+    local healthConnection = hum.HealthChanged:Connect(function(newHealth)
+        if newHealth < hum.MaxHealth then
+            hum.Health = hum.MaxHealth -- Auto-heal on damage
+        end
+    end)
+
+    -- Save the connection so we can reverse it if needed (though not strictly necessary for god mode)
+    if not char:FindFirstChild("GodModeConnection") then
+        local stringValue = Instance.new("StringValue")
+        stringValue.Name = "GodModeConnection"
+        stringValue.Value = tostring(healthConnection) -- Store connection handle (hacky, but works)
+        stringValue.Parent = char
+    end
+    
+    return true, "God Mode ENABLED (Health: ∞)"
+end
+
+-- 4. CLICK TELEPORT (Teleport where the mouse clicks)
+-- Usage: ctp
+commands.ctp = function(args)
+    if ctpConnection then return false, "Click Teleport is already active." end
+
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return false, "Character missing." end
+
+    ctpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed or input.UserInputType ~= Enum.UserInputType.MouseButton2 then return end
+        
+        local mouse = LocalPlayer:GetMouse()
+        local targetPos = mouse.Hit.p
+        
+        if targetPos then
+            -- Teleport 3 studs above the click position to avoid getting stuck
+            root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+        end
+    end)
+    return true, "Click Teleport ENABLED (Right-click to move)"
+end
+
+-- 5. UNCLICK TELEPORT
+-- Usage: unctp
+commands.unctp = function(args)
+    if ctpConnection then
+        ctpConnection:Disconnect()
+        ctpConnection = nil
+        return true, "Click Teleport DISABLED."
+    end
+    return false, "Click Teleport is not active."
+end
+
+
+-- 6. AURA (Damage Field)
+-- Usage: aura [damage] (default 10)
+commands.aura = function(args)
+    if currentAuraPart then commands.unaura({}) end
+
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return false, "Character missing." end
+
+    local damage = 10
+    if args[1] and tonumber(args[1]) then damage = tonumber(args[1]) end
+    
+    -- Create the invisible damage part
+    local aura = Instance.new("Part")
+    aura.Name = "DamageAura"
+    aura.Size = Vector3.new(5, 5, 5) -- 5x5x5 sphere for radius
+    aura.Shape = Enum.PartType.Ball
+    aura.Transparency = 0.8 -- Semi-transparent visual effect
+    aura.Color = Color3.fromRGB(255, 50, 50)
+    aura.CanCollide = false
+    aura.Anchored = false
+    aura.Massless = true
+    aura.Parent = workspace -- Parented to workspace first for safety
+
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = root
+    weld.Part1 = aura
+    weld.Parent = aura
+    
+    -- Function to handle damage on touch
+    aura.Touched:Connect(function(hit)
+        if hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid") then
+            if hit.Parent ~= char and hit.Parent.Name ~= char.Name then -- Don't damage self
+                local targetHum = hit.Parent:FindFirstChildOfClass("Humanoid")
+                if targetHum and targetHum.Health > 0 then
+                    -- Use :TakeDamage() on the client, which often syncs
+                    targetHum:TakeDamage(damage)
+                end
+            end
+        end
+    end)
+    
+    currentAuraPart = aura
+    return true, "Damage Aura ENABLED (5-stud radius, " .. damage .. " damage on touch)"
+end
+
+-- 7. UNAURA (Remove Damage Field)
+-- Usage: unaura
+commands.unaura = function(args)
+    if currentAuraPart then
+        currentAuraPart:Destroy()
+        currentAuraPart = nil
+        return true, "Damage Aura DISABLED."
+    end
+    return false, "Damage Aura is not active."
+end
+
+commands.leave = function(args)
+    addLog("Leaving game...", Color3.fromRGB(255,150,150))
+
+    -- Fake support if someone tries to use Shutdown()
+    if game.Shutdown then
+        pcall(function()
+            game:Shutdown()
+        end)
+    end
+    return true, "Bye!"
+end
+
 -------------------------------------------------------------------
 -- CAMERA / VIEW COMMANDS
 -------------------------------------------------------------------
