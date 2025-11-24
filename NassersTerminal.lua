@@ -1369,42 +1369,53 @@ commands.unfollow = function(args)
 end
 
 -- ============================================
--- PLUGIN SYSTEM FOR TERMINAL
+-- PLUGIN SYSTEM FOR TERMINAL (EXECUTOR LOCAL FOLDER)
 -- ============================================
 
--- Assumes `commands` table already exists above
--- Must be placed AFTER `commands = {}` but BEFORE InputBox execution logic
+-- Assumes 'commands' table exists above
+-- Must be placed AFTER 'commands = {}' but BEFORE InputBox execution
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local pluginFolder = ReplicatedStorage:FindFirstChild("TerminalPlugins")
-
-if pluginFolder then
-    for _, plugin in ipairs(pluginFolder:GetChildren()) do
-        local success, pluginCommands = pcall(function()
-            return require(plugin)  -- ModuleScript or .terminal returning table of commands
-        end)
-
-        if success and type(pluginCommands) == "table" then
-            for cmdName, cmdFunc in pairs(pluginCommands) do
-                -- Merge plugin commands into main commands table
-                commands[cmdName] = cmdFunc
-            end
-            print("[Terminal] Loaded plugin: "..plugin.Name)
-        else
-            warn("[Terminal] Failed to load plugin: "..plugin.Name)
-        end
-    end
+-- Check if executor supports makefolder
+local folderName = "NassersTerminalPlugins"
+if not isfolder then
+    warn("[Terminal] Executor does not support makefolder(). Plugins will not work.")
 else
-    warn("[Terminal] No TerminalPlugins folder found in ReplicatedStorage")
+    -- Create folder if missing
+    if not isfolder(folderName) then
+        makefolder(folderName)
+        print("[Terminal] Created local plugin folder: " .. folderName)
+    end
 end
 
--- Optional: Add a command to reload plugins on demand
-commands.reloadplugins = function(args)
-    -- Clear old plugin commands first
-    if pluginFolder then
-        for _, plugin in ipairs(pluginFolder:GetChildren()) do
+-- Load all .terminal files in the folder
+if isfile and listfiles then
+    for _, file in ipairs(listfiles(folderName)) do
+        if file:match("%.terminal$") then
             local ok, pluginCommands = pcall(function()
-                return require(plugin)
+                return loadfile(file)() -- Each plugin must return a table of commands
+            end)
+
+            if ok and type(pluginCommands) == "table" then
+                for cmdName, cmdFunc in pairs(pluginCommands) do
+                    commands[cmdName] = cmdFunc
+                end
+                print("[Terminal] Loaded plugin: " .. file:match("[^/\\]+$"))
+            else
+                warn("[Terminal] Failed to load plugin: " .. file:match("[^/\\]+$"))
+            end
+        end
+    end
+end
+
+-- Optional reload command
+commands.reloadplugins = function(args)
+    if not isfolder or not listfiles then
+        return false, "Executor does not support plugin reloading."
+    end
+    for _, file in ipairs(listfiles(folderName)) do
+        if file:match("%.terminal$") then
+            local ok, pluginCommands = pcall(function()
+                return loadfile(file)()
             end)
             if ok and type(pluginCommands) == "table" then
                 for cmdName, cmdFunc in pairs(pluginCommands) do
@@ -1412,10 +1423,8 @@ commands.reloadplugins = function(args)
                 end
             end
         end
-        return true, "Plugins reloaded."
-    else
-        return false, "No plugin folder found."
     end
+    return true, "Plugins reloaded."
 end
 
 -- 5. EXECUTION HANDLER
