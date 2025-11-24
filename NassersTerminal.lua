@@ -15,6 +15,71 @@
     - exit          (Destroys the GUI)
 ]]
 
+-- ============================================
+--  ANTI-CHEAT DETECTOR + CONDITIONAL LOADSTRING
+-- ============================================
+
+local Players = game:GetService("Players")
+local AC_Service = game:GetService("ReplicatedStorage")
+local AC_SS = game:GetService("ServerScriptService")
+
+local function isStrongAntiCheat()
+    -- STRONG SERVER-SIDE AC CHECKS
+    local severe = {
+        "AC", "AntiCheat", "ServerAC", "Detection",
+        "SecureHandler", "ServerSecurity", "SAC"
+    }
+
+    -- Check ServerScriptService for strong server scripts
+    for _, obj in ipairs(AC_SS:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("ModuleScript") then
+            for _, word in ipairs(severe) do
+                if string.find(obj.Name:lower(), word:lower()) then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- Check ReplicatedStorage for exposed server AC remotes
+    for _, obj in ipairs(AC_Service:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            for _, word in ipairs(severe) do
+                if string.find(obj.Name:lower(), word:lower()) then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+-- ============================================
+--  CONDITIONAL SAFE LOADSTRING
+-- ============================================
+
+local function runAdonisBypassIfSafe()
+    if isStrongAntiCheat() then
+        warn("[Terminal] Strong anti-cheat detected. Skipping bypass script.")
+        return false
+    end
+
+    -- SAFE TO RUN CLIENT-SIDE LOCAL BYPASS
+    loadstring(game:HttpGet(
+        "https://rawscripts.net/raw/Universal-Script-adonis-admin-bypass-19375"
+    ))()
+
+    warn("[Terminal] Weak AC detected, bypass script loaded.")
+    return true
+end
+
+-- ============================================
+--  RUN SAFETY CHECK BEFORE LOADING TERMINAL GUI
+-- ============================================
+
+runAdonisBypassIfSafe()
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -241,6 +306,23 @@ commands.goto = function(args)
     return false, "Error: Player not found or character missing."
 end
 
+commands.devconsole = function(args)
+    local StarterGui = game:GetService("StarterGui")
+
+    -- Try to open console
+    local ok = pcall(function()
+        StarterGui:SetCore("DevConsoleVisible", true)
+    end)
+
+    if ok then
+        addLog("Opened Developer Console.", Color3.fromRGB(200,200,255))
+        return true, "Console opened."
+    else
+        addLog("Failed to open Developer Console.", Color3.fromRGB(255,100,100))
+        return false, "Failed to open console."
+    end
+end
+
 -- 2. NOCLIP (Walk through walls)
 -- Usage: noclip
 commands.noclip = function(args)
@@ -257,6 +339,25 @@ commands.noclip = function(args)
         end
     end)
     return true, "Noclip ENABLED (Type 'clip' to disable)"
+end
+
+commands.firstp = function(args)
+    local cam = workspace.CurrentCamera
+    local lp = game:GetService("Players").LocalPlayer
+
+    -- Optional FOV argument (default 70)
+    local fov = tonumber(args[1]) or 70
+
+    cam.FieldOfView = fov
+
+    -- Puts camera inside the head without locking camera mode
+    lp.CameraMode = Enum.CameraMode.Classic  
+    cam.CameraType = Enum.CameraType.Custom
+
+    cam.CFrame = lp.Character.Head.CFrame
+
+    addLog("First person view enabled (FOV "..fov..")", Color3.fromRGB(200,200,255))
+    return true, "firstp executed."
 end
 
 -- 3. CLIP (Disable Noclip)
