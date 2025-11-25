@@ -203,7 +203,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, -10, 1, 0)
 TitleLabel.Position = UDim2.new(0, 10, 0, 0)
 TitleLabel.Font = Enum.Font.Code
-TitleLabel.Text = "Nasser's Terminal </>"
+TitleLabel.Text = "Nasser's Terminal FE </>"
 TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 TitleLabel.TextSize = 16
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -2291,5 +2291,5 @@ InputBox.FocusLost:Connect(function(enterPressed)
 end)
 
 -- Initial Welcome Message
-addLog("Welcome to Nasser's Terminal v1.0", Color3.fromRGB(100, 100, 255))
+addLog("Welcome to Nasser's Terminal v2.5", Color3.fromRGB(100, 100, 255))
 addLog("Type 'ws 100' or 'jp 50' to test.", Color3.fromRGB(150, 150, 150))
