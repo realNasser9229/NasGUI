@@ -154,6 +154,7 @@ local flyState = {
     bv = nil,
     bg = nil
 }
+local activeOrbits = {}
 
 
 -- Helper: Find a player by partial name (e.g. "nas" -> "Nasser")
@@ -376,6 +377,7 @@ commands.untfling = function(args)
     end
 end
 
+local activeOrbits = {}
 -- Orbit a player
 commands.orbit = function(args)
     local Players = game:GetService("Players")
@@ -453,9 +455,6 @@ end
 commands.fedisabledsaveinstance = function(args)
     loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FilteringDisable-For-SaveInstance-27147"))()
 end
-
--- table to track orbit loops
-local activeOrbits = {}
 
 -- stop orbit
 commands.stoporbit = function()
