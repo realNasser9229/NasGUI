@@ -357,6 +357,22 @@ commands.ws = function(args)
     end
 end
 
+commands.fpsunlock = function(args)
+    if #args < 1 then
+        return false, "Usage: fpsunlock {number}"
+    end
+
+    local cap = tonumber(args[1])
+    if not cap then
+        return false, "FPS cap must be a number."
+    end
+
+    -- Roblox internal variable (client only)
+    setfpscap(cap)
+
+    return true, "FPS cap set to "..cap
+end
+
 commands.tfling = function()
     hiddenfling = true
     return true, "Tfling enabled."
