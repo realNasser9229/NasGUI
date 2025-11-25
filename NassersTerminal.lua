@@ -83,7 +83,87 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+
+-- mainGui = the main terminal UI frame
+-- Replace 'mainGui' with whatever your variable is called
+local TerminalUI = mainGui  
+
+-- === Create red X Minimize button ===
+local closeBtn = Instance.new("TextButton")
+closeBtn.Parent = TerminalUI
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -34, 0, 6)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextScaled = true
+closeBtn.ZIndex = 999
+
+-- === Create the draggable circle restore button ===
+local restoreBtn = Instance.new("TextButton")
+restoreBtn.Parent = CoreGui
+restoreBtn.Name = "TerminalRestoreButton"
+restoreBtn.Size = UDim2.new(0, 60, 0, 60)
+restoreBtn.Position = UDim2.new(0.2, 0, 0.4, 0)
+restoreBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+restoreBtn.Text = "</>"
+restoreBtn.TextScaled = true
+restoreBtn.TextColor3 = Color3.fromRGB(255,255,255)
+restoreBtn.Visible = false
+restoreBtn.Active = true
+
+-- Make circle button round
+restoreBtn.ClipsDescendants = true
+restoreBtn.UICorner = Instance.new("UICorner", restoreBtn)
+restoreBtn.UICorner.CornerRadius = UDim.new(1,0)
+
+-- === Dragging function ===
+local dragging = false
+local dragStart, startPos
+
+restoreBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = restoreBtn.Position
+    end
+end)
+
+restoreBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        restoreBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- === Minimize GUI ===
+closeBtn.MouseButton1Click:Connect(function()
+    TerminalUI.Visible = false
+    restoreBtn.Visible = true
+end)
+
+-- === Restore GUI from circle ===
+restoreBtn.MouseButton1Click:Connect(function()
+    restoreBtn.Visible = false
+    TerminalUI.Visible = true
+end)
+
+-- === Restore GUI by pressing ANY key ===
+UserInputService.InputBegan:Connect(function(input)
+    if not TerminalUI.Visible then
+        TerminalUI.Visible = true
+        restoreBtn.Visible = false
+    end
+end)
 
 -- Check for existing GUI to prevent duplicates
 if game.CoreGui:FindFirstChild("NassersTerminal") then
