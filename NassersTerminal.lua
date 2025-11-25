@@ -729,7 +729,7 @@ end
 
 -- 3. INFINITE JUMP
 -- Usage: ij
-commands.ij = function(args)
+commands.infjump = function(args)
     if ijConnection then return false, "Infinite Jump is already active." end
     
     ijConnection = UserInputService.JumpRequest:Connect(function()
@@ -744,7 +744,7 @@ end
 
 -- 4. UNINFINITE JUMP
 -- Usage: unij
-commands.unij = function(args)
+commands.uninfjump = function(args)
     if ijConnection then
         ijConnection:Disconnect()
         ijConnection = nil
@@ -830,6 +830,29 @@ commands.god = function(args)
     return true, "God Mode ENABLED (Health: ∞)"
 end
 
+commands.script = function(args)
+    if #args == 0 then
+        return false, "Usage: script {lua code}"
+    end
+
+    -- Merge all arguments into one Lua code string
+    local code = table.concat(args, " ")
+
+    -- Try to compile
+    local fn, err = loadstring(code)
+    if not fn then
+        return false, "Compile error: " .. tostring(err)
+    end
+
+    -- Execute safely
+    local ok, runtimeErr = pcall(fn)
+    if not ok then
+        return false, "Runtime error: " .. tostring(runtimeErr)
+    end
+
+    return true, "Script executed."
+end
+
 -- 4. CLICK TELEPORT (Teleport where the mouse clicks)
 -- Usage: ctp
 commands.ctp = function(args)
@@ -864,62 +887,166 @@ commands.unctp = function(args)
     return false, "Click Teleport is not active."
 end
 
+commands.replicationstatus = function(args)
+    -- Destroy old window if user re-opens it
+    if game:GetService("CoreGui"):FindFirstChild("ReplicationStatusGUI") then
+        game:GetService("CoreGui").ReplicationStatusGUI:Destroy()
+    end
 
--- 6. AURA (Damage Field)
--- Usage: aura [damage] (default 10)
-commands.aura = function(args)
-    if currentAuraPart then commands.unaura({}) end
+    -- === GUI BASE ===
+    local g = Instance.new("ScreenGui")
+    g.Name = "ReplicationStatusGUI"
+    g.Parent = game:GetService("CoreGui")
+    g.ResetOnSpawn = false
 
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return false, "Character missing." end
+    local frame = Instance.new("Frame", g)
+    frame.Size = UDim2.new(0, 380, 0, 300)
+    frame.Position = UDim2.new(0.5, -190, 0.4, -150)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.BorderSizePixel = 0
 
-    local damage = 10
-    if args[1] and tonumber(args[1]) then damage = tonumber(args[1]) end
-    
-    -- Create the invisible damage part
-    local aura = Instance.new("Part")
-    aura.Name = "DamageAura"
-    aura.Size = Vector3.new(5, 5, 5) -- 5x5x5 sphere for radius
-    aura.Shape = Enum.PartType.Ball
-    aura.Transparency = 0.8 -- Semi-transparent visual effect
-    aura.Color = Color3.fromRGB(255, 50, 50)
-    aura.CanCollide = false
-    aura.Anchored = false
-    aura.Massless = true
-    aura.Parent = workspace -- Parented to workspace first for safety
+    local corner = Instance.new("UICorner", frame)
+    corner.CornerRadius = UDim.new(0, 8)
 
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = root
-    weld.Part1 = aura
-    weld.Parent = aura
-    
-    -- Function to handle damage on touch
-    aura.Touched:Connect(function(hit)
-        if hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid") then
-            if hit.Parent ~= char and hit.Parent.Name ~= char.Name then -- Don't damage self
-                local targetHum = hit.Parent:FindFirstChildOfClass("Humanoid")
-                if targetHum and targetHum.Health > 0 then
-                    -- Use :TakeDamage() on the client, which often syncs
-                    targetHum:TakeDamage(damage)
-                end
-            end
+    -- === DRAGGING SYSTEM ===
+    local UIS = game:GetService("UserInputService")
+    local dragging, dragStart, startPos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
         end
     end)
-    
-    currentAuraPart = aura
-    return true, "Damage Aura ENABLED (5-stud radius, " .. damage .. " damage on touch)"
-end
 
--- 7. UNAURA (Remove Damage Field)
--- Usage: unaura
-commands.unaura = function(args)
-    if currentAuraPart then
-        currentAuraPart:Destroy()
-        currentAuraPart = nil
-        return true, "Damage Aura DISABLED."
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- === CLOSE BUTTON ===
+    local close = Instance.new("TextButton", frame)
+    close.Text = "X"
+    close.Size = UDim2.new(0, 35, 0, 35)
+    close.Position = UDim2.new(1, -40, 0, 5)
+    close.TextScaled = true
+    close.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+    close.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0,6)
+
+    close.MouseButton1Click:Connect(function()
+        g:Destroy()
+    end)
+
+    -- === TITLE ===
+    local title = Instance.new("TextLabel", frame)
+    title.Text = "Replication Status"
+    title.Size = UDim2.new(1, -50, 0, 40)
+    title.Position = UDim2.new(0, 10, 0, 5)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.new(1,1,1)
+    title.TextScaled = true
+
+    -- === SCROLL FRAME ===
+    local scroll = Instance.new("ScrollingFrame", frame)
+    scroll.Size = UDim2.new(1, -20, 1, -60)
+    scroll.Position = UDim2.new(0, 10, 0, 50)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 600)
+    scroll.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    scroll.ScrollBarThickness = 6
+    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
+
+    -- === TEXT HOLDER ===
+    local text = Instance.new("TextLabel", scroll)
+    text.Size = UDim2.new(1, -10, 0, 600)
+    text.Position = UDim2.new(0, 5, 0, 5)
+    text.TextColor3 = Color3.new(1,1,1)
+    text.BackgroundTransparency = 1
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextYAlignment = Enum.TextYAlignment.Top
+    text.TextSize = 18
+    text.Font = Enum.Font.Code
+
+    -----------------------------------------------------------------------------------------------------------------------------
+    -- DATA COLLECTION
+    -----------------------------------------------------------------------------------------------------------------------------
+
+    -- Script Environment
+    local scriptType = "LocalScript (Client)"
+    
+    -- FilteringEnabled (FE)
+    local realFE = workspace.FilteringEnabled
+    local spoofCheck = tostring(workspace.FilteringEnabled)
+
+    local FEstatus = ""
+    if spoofCheck ~= tostring(realFE) then
+        FEstatus = "Spoofed"
+    else
+        FEstatus = realFE and "Enabled" or "Disabled"
     end
-    return false, "Damage Aura is not active."
+
+    -- RakNet (client estimate)
+    local stats = game:GetService("Stats")
+    local net = stats.Network
+    local ping = math.floor(stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+
+    local rakString = string.format(
+        "Ping: %dms\nSend Rate: %d\nReceive Rate: %d",
+        ping,
+        net.ReceiveKbps or 0,
+        net.SendKbps or 0
+    )
+
+    -- Roblox Anti-Cheat list (informational only)
+    local antiCheatList = [[
+• Client Behavior Tracking
+• Animation Tampering Detection
+• Movement Physics Watchdog
+• Humanoid State Verification
+• RemoteEvent Argument Sanitizing
+• CoreScript Integrity Checks
+• Anti-Speedhack
+• Anti-NoClip
+• Anti-Teleport Spike
+• Memory Tamper Alerts
+• Network Manipulation Detection
+    ]]
+
+    -----------------------------------------------------------------------------------------------------------------------------
+    -- UPDATE TEXT
+    -----------------------------------------------------------------------------------------------------------------------------
+    text.Text = string.format([[
+Script Environment:
+    • %s
+
+workspace.FilteringEnabled:
+    • %s
+
+RakNet:
+%s
+
+Roblox Anti-Cheats:
+%s
+    ]],
+    scriptType,
+    FEstatus,
+    rakString,
+    antiCheatList
+    )
+
+    return true, "Opened replication status window."
 end
 
 commands.leave = function(args)
@@ -932,6 +1059,239 @@ commands.leave = function(args)
         end)
     end
     return true, "Bye!"
+end
+
+commands.disablememorycategorycounters = function(args)
+    local CoreGui = game:GetService("CoreGui")
+    local devConsole = CoreGui:FindFirstChild("DevConsoleMaster")
+
+    if not devConsole then
+        return false, "DevConsole not loaded"
+    end
+
+    local success = false
+
+    pcall(function()
+        for _, module in ipairs(devConsole:GetDescendants()) do
+            if module:IsA("ModuleScript") and module.Name:lower():find("memory") then
+                local env = getsenv(module)
+                for k,v in pairs(env) do
+                    if typeof(v) == "boolean" and k:lower():find("enabled") then
+                        env[k] = false
+                        success = true
+                    end
+                end
+            end
+        end
+    end)
+
+    if success then
+        return true, "Memory category counters disabled."
+    else
+        return false, "Unable to disable memory counters."
+    end
+end
+
+commands.enablefpsgraph = function(args)
+    local CoreGui = game:GetService("CoreGui")
+    local devConsole = CoreGui:FindFirstChild("DevConsoleMaster")
+
+    if not devConsole then
+        return false, "DevConsole not loaded"
+    end
+
+    local success = false
+
+    pcall(function()
+        for _, module in ipairs(devConsole:GetDescendants()) do
+            if module:IsA("ModuleScript") and module.Name:lower():find("fps") then
+                local env = getsenv(module)
+                for k,v in pairs(env) do
+                    if typeof(v) == "boolean" and k:lower():find("enabled") then
+                        env[k] = true
+                        success = true
+                    end
+                end
+            end
+        end
+    end)
+
+    if success then
+        return true, "FPS Graph enabled."
+    else
+        return false, "Unable to enable FPS graph."
+    end
+end
+
+commands.enablepacketcounters = function(args)
+    local CoreGui = game:GetService("CoreGui")
+    local devConsole = CoreGui:FindFirstChild("DevConsoleMaster")
+
+    if not devConsole then
+        return false, "DevConsole not loaded"
+    end
+
+    local success = false
+
+    pcall(function()
+        for _, module in ipairs(devConsole:GetDescendants()) do
+            if module:IsA("ModuleScript") and module.Name:lower():find("network") then
+                local env = getsenv(module)
+                for k,v in pairs(env) do
+                    if typeof(v) == "boolean" and k:lower():find("enabled") then
+                        env[k] = true
+                        success = true
+                    end
+                end
+            end
+        end
+    end)
+
+    if success then
+        return true, "Packet counters enabled."
+    else
+        return false, "Unable to enable packet counters."
+    end
+end
+
+commands.showhiddenconsoletabs = function(args)
+    local CoreGui = game:GetService("CoreGui")
+    local devConsole = CoreGui:FindFirstChild("DevConsoleMaster")
+
+    if not devConsole then
+        return false, "DevConsole not loaded"
+    end
+
+    local success = false
+
+    pcall(function()
+        for _, module in ipairs(devConsole:GetDescendants()) do
+            if module:IsA("ModuleScript") and module.Name:lower():find("tabs") then
+                local env = getsenv(module)
+                for k,v in pairs(env) do
+                    if typeof(v) == "boolean" and k:lower():find("hidden") then
+                        env[k] = false
+                        success = true
+                    end
+                end
+            end
+        end
+    end)
+
+    if success then
+        return true, "Hidden DevConsole tabs are now visible."
+    else
+        return false, "Unable to show hidden tabs."
+    end
+end
+
+commands.clientstats = function(args)
+    local RunService = game:GetService("RunService")
+    local Stats = game:GetService("Stats")
+
+    local fps = 1/RunService.RenderStepped:Wait()
+    local mem = Stats:GetMemoryUsageMb()
+    local ping = Stats:GetStats().DataPing -- approximate
+
+    addLog(string.format("FPS (approx): %.2f", fps*60), Color3.fromRGB(150,255,150))
+    addLog(string.format("Memory Usage: %.2f MB", mem), Color3.fromRGB(150,255,150))
+    addLog(string.format("Ping: %d ms", ping), Color3.fromRGB(150,255,150))
+
+    return true, "Stats snapshot complete."
+end
+
+commands.fflaginspector = function(args)
+    local settings = settings()
+    if #args == 0 then
+        return false, "Usage: fflag get {flagname} | list"
+    end
+
+    local action = args[1]:lower()
+    if action == "get" then
+        local flag = args[2]
+        if not flag then return false, "Specify a flag name." end
+        local value = pcall(function() return settings():GetFFlag(flag) end)
+        return true, string.format("%s = %s", flag, tostring(value))
+    elseif action == "list" then
+        return false, "FFlag listing requires executor access; try 'fflag get {name}'."
+    else
+        return false, "Unknown fflag action: "..action
+    end
+end
+
+commands.vrstatus = function(args)
+    local VRService = game:GetService("VRService")
+    addLog("VR Supported: "..tostring(VRService.VREnabled), Color3.fromRGB(150,255,255))
+    addLog("Headset Position: "..tostring(VRService:GetUserCFrame(Enum.UserCFrame.Head)), Color3.fromRGB(150,255,255))
+    addLog("Left Controller: "..tostring(VRService:GetUserCFrame(Enum.UserCFrame.LeftHand)), Color3.fromRGB(150,255,255))
+    addLog("Right Controller: "..tostring(VRService:GetUserCFrame(Enum.UserCFrame.RightHand)), Color3.fromRGB(150,255,255))
+    return true, "VR status snapshot complete."
+end
+
+commands.inputdebug = function(args)
+    local UIS = game:GetService("UserInputService")
+    local count = 0
+    local maxLogs = 10
+
+    local conn
+    conn = UIS.InputBegan:Connect(function(input, gp)
+        if count >= maxLogs then conn:Disconnect() return end
+        addLog(string.format("Input: %s | KeyCode: %s | UserInputType: %s", input.UserInputType, input.KeyCode, input.UserInputType), Color3.fromRGB(255,200,150))
+        count = count + 1
+    end)
+
+    return true, "Listening to input events for 10 presses..."
+end
+
+commands.renderinfo = function(args)
+    local cam = workspace.CurrentCamera
+    addLog("Camera FOV: "..tostring(cam.FieldOfView), Color3.fromRGB(150,200,255))
+    addLog("Camera CFrame: "..tostring(cam.CFrame), Color3.fromRGB(150,200,255))
+    addLog("Lighting TimeOfDay: "..game:GetService("Lighting").TimeOfDay, Color3.fromRGB(150,200,255))
+    addLog("Fog End: "..tostring(game:GetService("Lighting").FogEnd), Color3.fromRGB(150,200,255))
+    addLog("Ambient: "..tostring(game:GetService("Lighting").Ambient), Color3.fromRGB(150,200,255))
+    return true, "Render info snapshot complete."
+end
+
+commands.pathdebug = function(args)
+    local target = workspace:FindFirstChild(args[1])
+    if not target then return false, "Specify a valid target in workspace." end
+
+    local PathfindingService = game:GetService("PathfindingService")
+    local playerChar = game.Players.LocalPlayer.Character
+    if not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then
+        return false, "Character not loaded or missing HumanoidRootPart."
+    end
+
+    local path = PathfindingService:CreatePath()
+    path:ComputeAsync(playerChar.HumanoidRootPart.Position, target.Position)
+    local waypoints = path:GetWaypoints()
+    for _, wp in ipairs(waypoints) do
+        local part = Instance.new("Part")
+        part.Anchored = true
+        part.CanCollide = false
+        part.Size = Vector3.new(1,1,1)
+        part.Position = wp.Position + Vector3.new(0,1,0)
+        part.Color = Color3.fromRGB(255,0,0)
+        part.Parent = workspace
+        task.delay(3, function() part:Destroy() end) -- remove after 3 sec
+    end
+
+    return true, "Path visualized for 3 seconds."
+end
+
+commands.eventspy = function(args)
+    local MessageBus = game:GetService("MessageBusService")
+    local count = 0
+    local maxLogs = 10
+    local conn
+    conn = MessageBus.OnMessageReceived:Connect(function(msg)
+        if count >= maxLogs then conn:Disconnect() return end
+        addLog("Event: "..msg.Name.." | Data: "..tostring(msg.Data), Color3.fromRGB(255,255,150))
+        count = count + 1
+    end)
+
+    return true, "Listening to 10 MessageBus events..."
 end
 
 -------------------------------------------------------------------
@@ -1165,14 +1525,114 @@ commands.removehats = function(args)
     return true, "All hats removed."
 end
 
-commands.trail = function(args)
-    local color = args[1] or "Bright red"
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false, "HRP not found." end
-    local trail = Instance.new("Trail", hrp)
-    trail.Color = ColorSequence.new(Color3.fromRGB(255,0,0))
-    trail.Lifetime = 1
-    return true, "Trail created."
+commands.rccspy = function(args)
+    local RCCService = game:GetService("RCCService")
+    if not RCCService then return false, "RCCService not found." end
+
+    -- Check if the GUI already exists
+    if game.CoreGui:FindFirstChild("RCCSpyGui") then
+        game.CoreGui.RCCSpyGui:Destroy()
+    end
+
+    -- Create main GUI
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "RCCSpyGui"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = game.CoreGui
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 400, 0, 300)
+    MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    MainFrame.BorderColor3 = Color3.fromRGB(80,80,80)
+    MainFrame.Active = true
+    MainFrame.Parent = ScreenGui
+
+    -- Make draggable
+    local dragging, dragInput, dragStart, startPos
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- Title Bar
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1,0,0,25)
+    Title.BackgroundTransparency = 1
+    Title.Text = "RCCService Spy"
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.Font = Enum.Font.Code
+    Title.TextSize = 16
+    Title.Parent = MainFrame
+
+    -- Close button
+    local Close = Instance.new("TextButton")
+    Close.Size = UDim2.new(0, 25, 0, 25)
+    Close.Position = UDim2.new(1,-25,0,0)
+    Close.BackgroundColor3 = Color3.fromRGB(180,50,50)
+    Close.Text = "X"
+    Close.TextColor3 = Color3.fromRGB(255,255,255)
+    Close.Parent = MainFrame
+    Close.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
+    -- Scrollable frame for messages
+    local Scroll = Instance.new("ScrollingFrame")
+    Scroll.Position = UDim2.new(0,5,0,30)
+    Scroll.Size = UDim2.new(1,-10,1,-35)
+    Scroll.CanvasSize = UDim2.new(0,0,0,0)
+    Scroll.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    Scroll.BorderSizePixel = 1
+    Scroll.ScrollBarThickness = 6
+    Scroll.Parent = MainFrame
+
+    local UIList = Instance.new("UIListLayout")
+    UIList.Parent = Scroll
+    UIList.SortOrder = Enum.SortOrder.LayoutOrder
+    UIList.Padding = UDim.new(0,2)
+
+    -- Helper function to log messages in GUI
+    local function logMessage(msg)
+        local label = Instance.new("TextLabel")
+        label.Text = msg
+        label.Size = UDim2.new(1,0,0,18)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.fromRGB(200,200,255)
+        label.Font = Enum.Font.Code
+        label.TextSize = 14
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = Scroll
+        Scroll.CanvasSize = UDim2.new(0,0,0,UIList.AbsoluteContentSize.Y)
+        Scroll.CanvasPosition = Vector2.new(0,99999)
+    end
+
+    -- Connect RCCService messages
+    local conn
+    conn = RCCService.OnClientEvent:Connect(function(msg)
+        logMessage(tostring(msg))
+    end)
+
+    return true, "RCCService spy GUI loaded. Listening for messages..."
 end
 
 commands.lights = function(args)
@@ -1194,6 +1654,157 @@ commands.glow = function(args)
         end
     end
     return true, "Glow effect applied."
+end
+
+-- Start Chat Logger
+commands.chatlogger = function(args)
+    local TextChatService = game:GetService("TextChatService")
+    if not TextChatService then return false, "TextChatService not found." end
+
+    -- Only hook once
+    if _G._chatLoggerConnected then return true, "ChatLogger already active." end
+
+    _G._chatLoggerConnection = TextChatService.OnIncomingMessage:Connect(function(msgObj)
+        local speaker = msgObj.TextSource.Name
+        local content = msgObj.Text
+        local filtered = msgObj.Text ~= content and "(Filtered)" or ""
+        addLog(string.format("[%s] %s %s", speaker, content, filtered), Color3.fromRGB(200,200,255))
+    end)
+
+    _G._chatLoggerConnected = true
+    addLog("ChatLogger activated. Listening for all player messages...", Color3.fromRGB(150,255,255))
+    return true, "ChatLogger is running."
+end
+
+-- Stop Chat Logger
+commands.stopchatlogger = function(args)
+    if _G._chatLoggerConnection then
+        _G._chatLoggerConnection:Disconnect()
+        _G._chatLoggerConnection = nil
+        _G._chatLoggerConnected = false
+        return true, "ChatLogger stopped."
+    else
+        return false, "ChatLogger was not running."
+    end
+end
+
+commands.spoofdevice = function(args)
+    local UIS = game:GetService("UserInputService")
+    local VRService = game:GetService("VRService")
+    if #args < 1 then return false, "Usage: spoofdevice {mobile, desktop, vr, console}" end
+    
+    local mode = args[1]:lower()
+    
+    if mode == "mobile" then
+        pcall(function()
+            UIS.TouchEnabled = true
+            UIS.KeyboardEnabled = false
+            UIS.GamepadEnabled = false
+            VRService.VREnabled = false
+        end)
+        return true, "Device spoofed to Mobile."
+        
+    elseif mode == "desktop" then
+        pcall(function()
+            UIS.TouchEnabled = false
+            UIS.KeyboardEnabled = true
+            UIS.GamepadEnabled = false
+            VRService.VREnabled = false
+        end)
+        return true, "Device spoofed to Desktop."
+        
+    elseif mode == "vr" then
+        pcall(function()
+            UIS.TouchEnabled = false
+            UIS.KeyboardEnabled = false
+            UIS.GamepadEnabled = true
+            VRService.VREnabled = true
+        end)
+        return true, "Device spoofed to VR."
+        
+    elseif mode == "console" then
+        pcall(function()
+            UIS.TouchEnabled = false
+            UIS.KeyboardEnabled = false
+            UIS.GamepadEnabled = true
+            VRService.VREnabled = false
+        end)
+        return true, "Device spoofed to Console."
+        
+    else
+        return false, "Unknown device type: "..mode
+    end
+end
+
+-- Delete Humanoid
+commands.deletehumanoid = function(args)
+    local char = game.Players.LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum:Destroy()
+        return true, "Humanoid deleted."
+    else
+        return false, "No Humanoid found."
+    end
+end
+
+-- Restore Humanoid
+commands.restorehumanoid = function(args)
+    local char = game.Players.LocalPlayer.Character
+    if not char then return false, "Character not found." end
+    if char:FindFirstChildOfClass("Humanoid") then
+        return false, "Humanoid already exists."
+    end
+
+    local hum = Instance.new("Humanoid")
+    hum.Name = "Humanoid"
+    hum.Parent = char
+
+    -- Restore basic R6/R15 properties
+    hum.Health = 100
+    hum.MaxHealth = 100
+    hum.WalkSpeed = 16
+    hum.JumpPower = 50
+    hum.UseJumpPower = true
+
+    return true, "Humanoid restored."
+end
+
+commands.fireremote = function(args)
+    if #args < 1 then
+        return false, "Usage: fireremote {RemoteName} {arg1, arg2, ...}"
+    end
+
+    local remoteName = args[1]
+    local remoteArgs = {}
+    for i = 2, #args do
+        table.insert(remoteArgs, loadstring("return " .. args[i])()) -- converts "true", "5", etc.
+    end
+
+    -- Search in ReplicatedStorage and Workspace
+    local remote = game:GetService("ReplicatedStorage"):FindFirstChild(remoteName) 
+        or workspace:FindFirstChild(remoteName)
+
+    if not remote then
+        return false, "Remote '"..remoteName.."' not found."
+    end
+
+    if remote:IsA("RemoteEvent") then
+        remote:FireServer(unpack(remoteArgs))
+        return true, "RemoteEvent '"..remoteName.."' fired."
+    elseif remote:IsA("RemoteFunction") then
+        local success, result = pcall(function()
+            return remote:InvokeServer(unpack(remoteArgs))
+        end)
+        if success then
+            return true, "RemoteFunction '"..remoteName.."' invoked. Result: "..tostring(result)
+        else
+            return false, "RemoteFunction '"..remoteName.."' error: "..tostring(result)
+        end
+    else
+        return false, "Object '"..remoteName.."' is not a RemoteEvent/RemoteFunction."
+    end
 end
 
 commands.smoke = function(args)
