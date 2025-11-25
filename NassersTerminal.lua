@@ -289,6 +289,45 @@ local function addLog(text, color)
     LogScroll.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
     LogScroll.CanvasPosition = Vector2.new(0, 99999)
 end
+---------------------------
+-- TRUE TFLING ENGINE
+---------------------------
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+
+local hiddenfling = false
+local movel = 0.1
+local flingPower = 9990000000000000 -- your preferred extreme power
+
+local function getHRP()
+	local char = lp.Character or lp.CharacterAdded:Wait()
+	return char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Permanent fling loop (disabled until commands toggle it)
+task.spawn(function()
+	while true do
+		RunService.Heartbeat:Wait()
+		if hiddenfling then
+			local HRP = getHRP()
+			if HRP then
+				local vel = HRP.Velocity
+				HRP.Velocity = vel * flingPower + Vector3.new(0, flingPower, 0)
+				
+				RunService.RenderStepped:Wait()
+				if HRP then HRP.Velocity = vel end
+				
+				RunService.Stepped:Wait()
+				if HRP then
+					HRP.Velocity = vel + Vector3.new(0, movel, 0)
+					movel = -movel
+				end
+			end
+		end
+	end
+end)
 
 -- 4. COMMAND LOGIC
 
@@ -318,63 +357,14 @@ commands.ws = function(args)
     end
 end
 
--- Tfling using your preferred hiddenfling system (no explosion, no aura)
-commands.tfling = function(args)
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local lp = Players.LocalPlayer
-    local char = lp.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        return false, "Character not ready."
-    end
-
-    local hrp = char.HumanoidRootPart
-    local hiddenfling = true
-    local flingPower = 10000
-    local movel = 0.1
-    local duration = 0.3
-    local elapsed = 0
-
-    local conn
-    conn = RunService.Heartbeat:Connect(function(dt)
-        if not hiddenfling or not char or not hrp.Parent then
-            hrp.Velocity = Vector3.new(0,0,0)
-            conn:Disconnect()
-            return
-        end
-
-        elapsed = elapsed + dt
-        -- Apply fling motion
-        hrp.Velocity = hrp.Velocity * flingPower + Vector3.new(0, movel, 0)
-        movel = movel * -1
-
-        if elapsed >= duration then
-            hiddenfling = false
-            hrp.Velocity = Vector3.new(0,0,0)
-            conn:Disconnect()
-        end
-    end)
-
-    return true, "Tfling executed with hiddenfling technique!"
+commands.tfling = function()
+    hiddenfling = true
+    return true, "Tfling enabled."
 end
 
--- Stop the hiddenfling (untfling)
-commands.untfling = function(args)
-    local Players = game:GetService("Players")
-    local lp = Players.LocalPlayer
-    local char = lp.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        return false, "Character not ready."
-    end
-
-    -- Disable the hiddenfling
-    if _G.hiddenfling then
-        _G.hiddenfling = false
-        char.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
-        return true, "Fling stopped."
-    else
-        return false, "Fling not active."
-    end
+commands.untfling = function()
+    hiddenfling = false
+    return true, "Tfling disabled."
 end
 
 local activeOrbits = {}
