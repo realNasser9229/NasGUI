@@ -538,6 +538,22 @@ commands.ping = function(args)
     return true, "Ping: " .. math.floor(ping) .. " ms"
 end
 
+commands.credits = function()
+    local lines = {
+        "=== CREDITS ===",
+        "OWNER:       Nasser9229 / nas9229alt",
+        "INSPIRATION: Janny / 1602sasa",
+        "TESTER:      Fotis / fotis19902",
+        "================"
+    }
+
+    for _, msg in ipairs(lines) do
+        addToTerminal(msg)
+    end
+
+    return true, "They contributed a LOT for this script..."
+end
+
 -- 3) mem — memory categories
 commands.mem = function(args)
     local categories = Stats:GetChildren()
