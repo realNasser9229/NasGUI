@@ -102,68 +102,37 @@ closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
 closeBtn.ZIndex = 999
 
--- === Create the draggable circle restore button ===
+-- Create a ScreenGui to hold the restore button (safe parent)
+local restoreGui = Instance.new("ScreenGui")
+restoreGui.Name = "TerminalRestoreGui"
+restoreGui.ResetOnSpawn = false
+
+-- Try CoreGui first (executor-friendly), fallback to PlayerGui
+if not pcall(function()
+    restoreGui.Parent = game:GetService("CoreGui")
+end) then
+    restoreGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Create the draggable circle restore button inside the ScreenGui
 local restoreBtn = Instance.new("TextButton")
-restoreBtn.Parent = CoreGui
 restoreBtn.Name = "TerminalRestoreButton"
 restoreBtn.Size = UDim2.new(0, 60, 0, 60)
 restoreBtn.Position = UDim2.new(0.2, 0, 0.4, 0)
 restoreBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 restoreBtn.Text = "</>"
 restoreBtn.TextScaled = true
-restoreBtn.TextColor3 = Color3.fromRGB(255,255,255)
+restoreBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 restoreBtn.Visible = false
 restoreBtn.Active = true
-
--- Make circle button round
 restoreBtn.ClipsDescendants = true
-restoreBtn.UICorner = Instance.new("UICorner", restoreBtn)
-restoreBtn.UICorner.CornerRadius = UDim.new(1,0)
+restoreBtn.Parent = restoreGui
+restoreBtn.ZIndex = 9999
 
--- === Dragging function ===
-local dragging = false
-local dragStart, startPos
-
-restoreBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = restoreBtn.Position
-    end
-end)
-
-restoreBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        restoreBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- === Minimize GUI ===
-closeBtn.MouseButton1Click:Connect(function()
-    TerminalUI.Visible = false
-    restoreBtn.Visible = true
-end)
-
--- === Restore GUI from circle ===
-restoreBtn.MouseButton1Click:Connect(function()
-    restoreBtn.Visible = false
-    TerminalUI.Visible = true
-end)
-
--- === Restore GUI by pressing ANY key ===
-UserInputService.InputBegan:Connect(function(input)
-    if not TerminalUI.Visible then
-        TerminalUI.Visible = true
-        restoreBtn.Visible = false
-    end
-end)
+-- Rounded circle shape
+local ui = Instance.new("UICorner")
+ui.CornerRadius = UDim.new(1, 0)
+ui.Parent = restoreBtn
 
 -- Check for existing GUI to prevent duplicates
 if game.CoreGui:FindFirstChild("NassersTerminal") then
