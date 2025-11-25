@@ -317,6 +317,157 @@ commands.ws = function(args)
     end
 end
 
+-- Tfling using your preferred hiddenfling system (no explosion, no aura)
+commands.tfling = function(args)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local lp = Players.LocalPlayer
+    local char = lp.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false, "Character not ready."
+    end
+
+    local hrp = char.HumanoidRootPart
+    local hiddenfling = true
+    local flingPower = 10000
+    local movel = 0.1
+    local duration = 0.3
+    local elapsed = 0
+
+    local conn
+    conn = RunService.Heartbeat:Connect(function(dt)
+        if not hiddenfling or not char or not hrp.Parent then
+            hrp.Velocity = Vector3.new(0,0,0)
+            conn:Disconnect()
+            return
+        end
+
+        elapsed = elapsed + dt
+        -- Apply fling motion
+        hrp.Velocity = hrp.Velocity * flingPower + Vector3.new(0, movel, 0)
+        movel = movel * -1
+
+        if elapsed >= duration then
+            hiddenfling = false
+            hrp.Velocity = Vector3.new(0,0,0)
+            conn:Disconnect()
+        end
+    end)
+
+    return true, "Tfling executed with hiddenfling technique!"
+end
+
+-- Stop the hiddenfling (untfling)
+commands.untfling = function(args)
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+    local char = lp.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false, "Character not ready."
+    end
+
+    -- Disable the hiddenfling
+    if _G.hiddenfling then
+        _G.hiddenfling = false
+        char.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+        return true, "Fling stopped."
+    else
+        return false, "Fling not active."
+    end
+end
+
+-- Orbit a player
+commands.orbit = function(args)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+
+    if #args < 2 then
+        return false, "Usage: orbit {player} {speed}"
+    end
+
+    local targetName, speedArg = args[1], tonumber(args[2])
+    if not speedArg then return false, "Speed must be a number." end
+
+    local target = Players:FindFirstChild(targetName)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+        return false, "Target player not found or missing HRP."
+    end
+
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false, "Your character not ready."
+    end
+
+    local hrp = char.HumanoidRootPart
+    local angle = 0
+
+    local conn
+    conn = RunService.RenderStepped:Connect(function(dt)
+        if not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+            conn:Disconnect()
+            return
+        end
+        angle = angle + dt * speedArg
+        local radius = 10
+        local offset = Vector3.new(math.cos(angle)*radius, 0, math.sin(angle)*radius)
+        hrp.CFrame = CFrame.new(target.Character.HumanoidRootPart.Position + offset, target.Character.HumanoidRootPart.Position)
+    end)
+
+    return true, "Orbiting "..targetName.." at speed "..speedArg
+end
+
+-- Set a player display name locally
+commands.setname = function(args)
+    local Players = game:GetService("Players")
+    if #args < 2 then return false, "Usage: setname {player} {text}" end
+
+    local targetName, newName = args[1], table.concat({select(2, table.unpack(args))}, " ")
+    local target = Players:FindFirstChild(targetName)
+    if not target then return false, "Player not found." end
+
+    if target:FindFirstChild("PlayerGui") then
+        target.DisplayName = newName -- Local only change
+        return true, targetName.." display name changed to "..newName.." (client-sided)"
+    else
+        return false, "Target player character not loaded."
+    end
+end
+
+-- r6 animations on r15
+commands.r6onr15 = function(args)
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-R6-Animations-on-R15-16865"))()
+end
+
+-- korblox
+commands.korblox = function(args)
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Korblox-R6-28939"))()
+end
+
+-- spiderman (walk on walls)
+commands.spiderman = function(args)
+    loadstring(game:HttpGet("https://rawscripts.net/raw/FE-walk-on-walls_206"))()
+end
+
+-- FE Disabled SaveInstance bypass (client-side)
+commands.fedisabledsaveinstance = function(args)
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FilteringDisable-For-SaveInstance-27147"))()
+end
+
+-- table to track orbit loops
+local activeOrbits = {}
+
+-- stop orbit
+commands.stoporbit = function()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+
+    if activeOrbits[lp] then
+        activeOrbits[lp]:Disconnect()
+        activeOrbits[lp] = nil
+    end
+end
+
 -- Command: JumpPower
 commands.jp = function(args)
     if #args < 1 then
