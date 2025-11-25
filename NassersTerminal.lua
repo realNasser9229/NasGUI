@@ -85,6 +85,7 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local Stats = game:GetService("Stats")
 local LocalPlayer = Players.LocalPlayer
 
 -- mainGui = the main terminal UI frame
@@ -334,6 +335,153 @@ commands.jp = function(args)
     else
         return false, "Error: Humanoid not found."
     end
+end
+
+-- ======================================================
+--   CLIENT INTERNAL DIAGNOSTICS COMMANDS (SAFE)
+-- ======================================================
+
+local lastHeartbeat = 0
+local fps = 60
+
+RunService.Heartbeat:Connect(function(dt)
+    fps = math.floor(1 / dt)
+end)
+
+-- 1) fps — show Frames Per Second
+commands.fps = function(args)
+    return true, "FPS: " .. tostring(fps)
+end
+
+-- 2) ping — network ping from stats
+commands.ping = function(args)
+    local net = Stats.Network
+    local ping = net.ServerStatsItem["Data Ping"]:GetValue()
+    return true, "Ping: " .. math.floor(ping) .. " ms"
+end
+
+-- 3) mem — memory categories
+commands.mem = function(args)
+    local categories = Stats:GetChildren()
+    local out = {}
+    for _, cat in ipairs(categories) do
+        if cat:GetValue() > 0 then
+            table.insert(out, cat.Name .. " = " .. math.floor(cat:GetValue()/1024/1024) .. " MB")
+        end
+    end
+    return true, "Memory Categories:\n" .. table.concat(out, "\n")
+end
+
+-- 4) gc — garbage collector usage
+commands.gc = function(args)
+    local kb = collectgarbage("count")
+    return true, "Lua Garbage Collector: " .. math.floor(kb) .. " KB"
+end
+
+-- 5) connections {instance} — list getconnections of object
+commands.connections = function(args)
+    if #args < 1 then
+        return false, "Usage: connections {InstanceName}"
+    end
+
+    local obj = game:GetService("Players").LocalPlayer:FindFirstChild(args[1], true)
+        or workspace:FindFirstChild(args[1], true)
+
+    if not obj then
+        return false, "Instance not found."
+    end
+
+    local list = getconnections(obj)
+    local text = {}
+    for i,v in ipairs(list) do
+        table.insert(text, "["..i.."] " .. tostring(v.Function))
+    end
+
+    return true, "Connections for "..obj.Name..":\n" .. table.concat(text, "\n")
+end
+
+-- 6) camstate — camera diagnostic dump
+commands.camstate = function(args)
+    local cam = workspace.CurrentCamera
+    local info = {
+        "Camera Type: " .. tostring(cam.CameraType),
+        "Field of View: " .. tostring(cam.FieldOfView),
+        "CFrame: " .. tostring(cam.CFrame.Position),
+        "Focus: " .. tostring(cam.Focus.Position)
+    }
+    return true, table.concat(info, "\n")
+end
+
+-- 7) netowner {part} — shows network ownership of a part
+commands.netowner = function(args)
+    if #args < 1 then return false, "Usage: netowner {PartName}" end
+
+    local part = workspace:FindFirstChild(args[1], true)
+    if not part or not part:IsA("BasePart") then
+        return false, "Part not found or not a BasePart."
+    end
+    
+    local owner = part:GetNetworkOwner()
+    return true, "Network Owner: " .. (owner and owner.Name or "Server")
+end
+
+-- 8) region — shows replication focus / area of interest
+commands.region = function()
+    local focus = LocalPlayer.ReplicationFocus
+    return true, "Replication Focus: " .. (focus and focus:GetFullName() or "None")
+end
+
+-- 9) perf — Roblox PerformanceStats breakdown
+commands.perf = function()
+    local perf = Stats.PerformanceStats
+    local out = {}
+    for _, stat in ipairs(perf:GetChildren()) do
+        table.insert(out, stat.Name .. ": " .. tostring(stat:GetValue()))
+    end
+    return true, "Performance Stats:\n" .. table.concat(out, "\n")
+end
+
+-- 10) events — list signals on RunService & input services
+commands.events = function()
+    local out = {
+        "RenderStepped connected: " .. #getconnections(RunService.RenderStepped),
+        "Heartbeat connected: " .. #getconnections(RunService.Heartbeat),
+        "Stepped connected: " .. #getconnections(RunService.Stepped),
+        "InputBegan: " .. #getconnections(game:GetService('UserInputService').InputBegan),
+        "InputEnded: " .. #getconnections(game:GetService('UserInputService').InputEnded),
+    }
+    return true, "Signal Connection Counters:\n" .. table.concat(out, "\n")
+end
+
+-- 11) camdelta — frame delta times
+commands.camdelta = function()
+    return true, "Last frame delta: " .. tostring(RunService.RenderStepped:Wait())
+end
+
+-- 12) physstats — physics throttling info
+commands.physstats = function()
+    local ps = Stats.PhysicsStats
+    local out = {}
+    for _, child in ipairs(ps:GetChildren()) do
+        table.insert(out, child.Name .. ": " .. tostring(child:GetValue()))
+    end
+    return true, "PhysicsStats:\n" .. table.concat(out, "\n")
+end
+
+-- 13) trace <function> — debug.info introspection (safe)
+commands.trace = function(args)
+    if #args < 1 then return false, "Usage: trace {functionNameIngetfenv}" end
+    
+    local fn = getfenv()[args[1]]
+    if typeof(fn) ~= "function" then return false, "Not a function" end
+
+    local out = {
+        "Source: " .. tostring(debug.info(fn, "s")),
+        "Line Defined: " .. tostring(debug.info(fn, "l")),
+        "What: " .. tostring(debug.info(fn, "t")),
+        "Name: " .. tostring(debug.info(fn, "n")),
+    }
+    return true, "Function Trace:\n" .. table.concat(out, "\n")
 end
 
 commands.say = function(args)
@@ -887,168 +1035,6 @@ commands.unctp = function(args)
     return false, "Click Teleport is not active."
 end
 
-commands.replicationstatus = function(args)
-    -- Destroy old window if user re-opens it
-    if game:GetService("CoreGui"):FindFirstChild("ReplicationStatusGUI") then
-        game:GetService("CoreGui").ReplicationStatusGUI:Destroy()
-    end
-
-    -- === GUI BASE ===
-    local g = Instance.new("ScreenGui")
-    g.Name = "ReplicationStatusGUI"
-    g.Parent = game:GetService("CoreGui")
-    g.ResetOnSpawn = false
-
-    local frame = Instance.new("Frame", g)
-    frame.Size = UDim2.new(0, 380, 0, 300)
-    frame.Position = UDim2.new(0.5, -190, 0.4, -150)
-    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-    frame.BorderSizePixel = 0
-
-    local corner = Instance.new("UICorner", frame)
-    corner.CornerRadius = UDim.new(0, 8)
-
-    -- === DRAGGING SYSTEM ===
-    local UIS = game:GetService("UserInputService")
-    local dragging, dragStart, startPos
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    -- === CLOSE BUTTON ===
-    local close = Instance.new("TextButton", frame)
-    close.Text = "X"
-    close.Size = UDim2.new(0, 35, 0, 35)
-    close.Position = UDim2.new(1, -40, 0, 5)
-    close.TextScaled = true
-    close.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
-    close.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", close).CornerRadius = UDim.new(0,6)
-
-    close.MouseButton1Click:Connect(function()
-        g:Destroy()
-    end)
-
-    -- === TITLE ===
-    local title = Instance.new("TextLabel", frame)
-    title.Text = "Replication Status"
-    title.Size = UDim2.new(1, -50, 0, 40)
-    title.Position = UDim2.new(0, 10, 0, 5)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.new(1,1,1)
-    title.TextScaled = true
-
-    -- === SCROLL FRAME ===
-    local scroll = Instance.new("ScrollingFrame", frame)
-    scroll.Size = UDim2.new(1, -20, 1, -60)
-    scroll.Position = UDim2.new(0, 10, 0, 50)
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 600)
-    scroll.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    scroll.ScrollBarThickness = 6
-    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
-
-    -- === TEXT HOLDER ===
-    local text = Instance.new("TextLabel", scroll)
-    text.Size = UDim2.new(1, -10, 0, 600)
-    text.Position = UDim2.new(0, 5, 0, 5)
-    text.TextColor3 = Color3.new(1,1,1)
-    text.BackgroundTransparency = 1
-    text.TextXAlignment = Enum.TextXAlignment.Left
-    text.TextYAlignment = Enum.TextYAlignment.Top
-    text.TextSize = 18
-    text.Font = Enum.Font.Code
-
-    -----------------------------------------------------------------------------------------------------------------------------
-    -- DATA COLLECTION
-    -----------------------------------------------------------------------------------------------------------------------------
-
-    -- Script Environment
-    local scriptType = "LocalScript (Client)"
-    
-    -- FilteringEnabled (FE)
-    local realFE = workspace.FilteringEnabled
-    local spoofCheck = tostring(workspace.FilteringEnabled)
-
-    local FEstatus = ""
-    if spoofCheck ~= tostring(realFE) then
-        FEstatus = "Spoofed"
-    else
-        FEstatus = realFE and "Enabled" or "Disabled"
-    end
-
-    -- RakNet (client estimate)
-    local stats = game:GetService("Stats")
-    local net = stats.Network
-    local ping = math.floor(stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-
-    local rakString = string.format(
-        "Ping: %dms\nSend Rate: %d\nReceive Rate: %d",
-        ping,
-        net.ReceiveKbps or 0,
-        net.SendKbps or 0
-    )
-
-    -- Roblox Anti-Cheat list (informational only)
-    local antiCheatList = [[
-• Client Behavior Tracking
-• Animation Tampering Detection
-• Movement Physics Watchdog
-• Humanoid State Verification
-• RemoteEvent Argument Sanitizing
-• CoreScript Integrity Checks
-• Anti-Speedhack
-• Anti-NoClip
-• Anti-Teleport Spike
-• Memory Tamper Alerts
-• Network Manipulation Detection
-    ]]
-
-    -----------------------------------------------------------------------------------------------------------------------------
-    -- UPDATE TEXT
-    -----------------------------------------------------------------------------------------------------------------------------
-    text.Text = string.format([[
-Script Environment:
-    • %s
-
-workspace.FilteringEnabled:
-    • %s
-
-RakNet:
-%s
-
-Roblox Anti-Cheats:
-%s
-    ]],
-    scriptType,
-    FEstatus,
-    rakString,
-    antiCheatList
-    )
-
-    return true, "Opened replication status window."
-end
-
 commands.leave = function(args)
     addLog("Leaving game...", Color3.fromRGB(255,150,150))
 
@@ -1524,6 +1510,8 @@ commands.removehats = function(args)
     end
     return true, "All hats removed."
 end
+
+
 
 commands.rccspy = function(args)
     local RCCService = game:GetService("RCCService")
@@ -2022,22 +2010,6 @@ end
 -------------------------------------------------------------------
 -- CAMERA / SCREEN EFFECTS
 -------------------------------------------------------------------
-
-commands.follow = function(args)
-    if not args[1] then return false, "Usage: follow [player]" end
-    local target
-    for _, p in pairs(game.Players:GetPlayers()) do
-        if p.Name:lower():sub(1,#args[1]:lower()) == args[1]:lower() then target = p break end
-    end
-    if not target or not target.Character or not target.Character:FindFirstChild("Humanoid") then return false, "Player not found." end
-    workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
-    return true, "Camera following "..target.Name
-end
-
-commands.unfollow = function(args)
-    workspace.CurrentCamera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    return true, "Camera reset to self."
-end
 
 -- ============================================
 -- PLUGIN SYSTEM FOR TERMINAL (EXECUTOR LOCAL FOLDER)
