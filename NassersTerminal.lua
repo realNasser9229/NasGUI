@@ -457,6 +457,28 @@ commands.stoporbit = function()
     end
 end
 
+commands.droptool = function()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+    local char = lp.Character
+    if not char then
+        return false, "Character not found."
+    end
+
+    local tool = char:FindFirstChildWhichIsA("Tool")
+    if not tool then
+        return false, "You are not holding a tool."
+    end
+
+    if tool.CanBeDropped == false then
+        return false, "This tool cannot be dropped."
+    end
+
+    tool.Parent = workspace
+
+    return true, "Dropped tool."
+end
+
 -- Command: JumpPower
 commands.jp = function(args)
     if #args < 1 then
