@@ -827,28 +827,41 @@ commands.fly = function(args)
         end
         
         local cam = workspace.CurrentCamera
+        local speed = 50 -- Using the default/set speed
         local moveDir = Vector3.zero
-        local inputFound = false
+        
+        -- Calculate flattened vectors for horizontal movement
+        -- This ensures we don't drift up/down when strafing or moving forward
+        local flatLook = (cam.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
+        local rightVector = cam.CFrame.RightVector
 
-        -- [[ PC CONTROLS ]]
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector inputFound = true end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector inputFound = true end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector inputFound = true end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector inputFound = true end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) inputFound = true end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) inputFound = true end
+        -- [[ PC HORIZONTAL MOVEMENT (W/S/A/D) ]]
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + flatLook end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - flatLook end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - rightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + rightVector end
 
-        -- [[ MOBILE CONTROLS ]]
-        -- If no keyboard keys pressed, check Mobile Thumbstick (MoveDirection)
-        if not inputFound and hum.MoveDirection.Magnitude > 0 then
-            -- On mobile, if they push the stick, fly in the direction the CAMERA is facing
-            moveDir = cam.CFrame.LookVector
-            inputFound = true
+        -- [[ PC VERTICAL MOVEMENT (Space/Ctrl) ]]
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+        
+        -- [[ MOBILE INPUT (If no PC input, check thumbstick) ]]
+        -- Use the Humanoid's calculated MoveDirection for mobile input, then flatten it.
+        if moveDir.Magnitude == 0 and hum.MoveDirection.Magnitude > 0 then
+             local horizontalMobileInput = (hum.MoveDirection * Vector3.new(1, 0, 1)).Unit
+             moveDir = moveDir + horizontalMobileInput
         end
-
+        
         -- Update Physics
-        bg.CFrame = cam.CFrame -- Character always looks at camera direction
-        bv.Velocity = moveDir * speed
+        if moveDir.Magnitude > 0 then
+            -- IMPORTANT: Use .Unit to normalize the combined vector, preventing faster diagonal movement
+            bv.Velocity = moveDir.Unit * speed
+        else
+            bv.Velocity = Vector3.zero
+        end
+        
+        -- Keep character facing where the camera is looking
+        bg.CFrame = cam.CFrame
     end)
 
     return true, "Fly ENABLED (Speed: "..speed..")"
