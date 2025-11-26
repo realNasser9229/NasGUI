@@ -786,10 +786,8 @@ commands.clip = function(args)
     return false, "Noclip is not active."
 end
 
--- COMMAND: FLY (Mobile & PC Friendly)
--- Usage: fly [speed] (optional number, default 50)
 commands.fly = function(args)
-    -- 1. Reset if already flying
+    -- 1. Cleanup old fly
     if flyState.connection then commands.unfly({}) end
 
     local char = LocalPlayer.Character
@@ -797,16 +795,16 @@ commands.fly = function(args)
     local hum = char and char:FindFirstChild("Humanoid")
     if not root or not hum then return false, "Character missing." end
 
-    -- 2. Setup Speed
+    -- 2. Speed Setup
     local speed = 50
     if args[1] and tonumber(args[1]) then
         speed = tonumber(args[1])
     end
 
-    -- 3. Enable PlatformStand (Stops animations/gravity physics)
+    -- 3. PlatformStand (Freeze animation)
     hum.PlatformStand = true
 
-    -- 4. Create Physics Movers
+    -- 4. Movers
     local bv = Instance.new("BodyVelocity", root)
     bv.Velocity = Vector3.zero
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
@@ -819,68 +817,60 @@ commands.fly = function(args)
     flyState.bv = bv
     flyState.bg = bg
 
-    -- 5. Start Loop (Heartbeat is better for physics)
+    -- 5. Movement Loop
     flyState.connection = RunService.Heartbeat:Connect(function()
         if not char.Parent or not root.Parent then
-            commands.unfly({}) -- Safety cutoff
+            commands.unfly({})
             return 
         end
         
         local cam = workspace.CurrentCamera
-        local speed = 50 -- Using the default/set speed
         local moveDir = Vector3.zero
-        
-        -- Calculate flattened vectors for horizontal movement
-        -- This ensures we don't drift up/down when strafing or moving forward
-        local flatLook = (cam.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
-        local rightVector = cam.CFrame.RightVector
+        local inputFound = false
 
-        -- [[ PC HORIZONTAL MOVEMENT (W/S/A/D) ]]
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + flatLook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - flatLook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - rightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + rightVector end
-
-        -- [[ PC VERTICAL MOVEMENT (Space/Ctrl) ]]
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) end
+        -- [[ PC CONTROLS ]]
+        -- W/S moves along the LookVector (Where camera points: Up, Down, or Forward)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector inputFound = true end
         
-        -- [[ MOBILE INPUT (If no PC input, check thumbstick) ]]
-        -- Use the Humanoid's calculated MoveDirection for mobile input, then flatten it.
-        if moveDir.Magnitude == 0 and hum.MoveDirection.Magnitude > 0 then
-             local horizontalMobileInput = (hum.MoveDirection * Vector3.new(1, 0, 1)).Unit
-             moveDir = moveDir + horizontalMobileInput
+        -- A/D strafes along the RightVector
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector inputFound = true end
+        
+        -- Space/Ctrl for pure vertical
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) inputFound = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0,1,0) inputFound = true end
+
+        -- [[ MOBILE CONTROLS ]]
+        -- If user touches the stick, fly in the direction of the camera
+        if not inputFound and hum.MoveDirection.Magnitude > 0 then
+            -- This makes you fly exactly where you are looking when you push the stick
+            moveDir = cam.CFrame.LookVector
         end
-        
+
         -- Update Physics
         if moveDir.Magnitude > 0 then
-            -- IMPORTANT: Use .Unit to normalize the combined vector, preventing faster diagonal movement
             bv.Velocity = moveDir.Unit * speed
         else
             bv.Velocity = Vector3.zero
         end
         
-        -- Keep character facing where the camera is looking
+        -- Always face camera
         bg.CFrame = cam.CFrame
     end)
 
-    return true, "Fly ENABLED (Speed: "..speed..")"
+    return true, "Fly ENABLED"
 end
 
--- COMMAND: UNFLY
--- Usage: unfly
 commands.unfly = function(args)
-    -- 1. Disconnect Loop
     if flyState.connection then
         flyState.connection:Disconnect()
         flyState.connection = nil
     end
 
-    -- 2. Destroy Physics Objects
     if flyState.bv then flyState.bv:Destroy() flyState.bv = nil end
     if flyState.bg then flyState.bg:Destroy() flyState.bg = nil end
 
-    -- 3. Disable PlatformStand (Resume normal walking)
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.PlatformStand = false
