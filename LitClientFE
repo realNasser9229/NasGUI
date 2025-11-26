@@ -1,327 +1,230 @@
 --[[
-    LitClient FE | v1.0.3 (Compact / Mobile Friendly)
-    Style: Infinite Yield (Sleek, Bottom Right, Locked Position)
+    LitClient FE v2.0 — 2025 Edition
+    Clean • Mobile Gods • Infinite Yield vibes but better
+    Made with love for the real ones
 ]]
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local TweenService      = game:GetService("TweenService")
+local CoreGui           = game:GetService("CoreGui")
+local TeleportService   = game:GetService("TeleportService")
+local StarterGui        = game:GetService("StarterGui")
+
 local LocalPlayer = Players.LocalPlayer
 
 --// CONFIG
-local Config = {
-    Color = Color3.fromRGB(50, 50, 50), -- Dark Grey (IY Style)
-    Accent = Color3.fromRGB(255, 255, 255), -- White Text
-    Prefix = ";",
-    Speed = 0.3 -- Animation speed
-}
-
--- ==============================
--- LitClient FE — PERFECT FLY 2025 (Mobile + PC) 
--- ==============================
-
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-
+local Prefix = ";"
+local FlySpeed = 120
 local Flying = false
-local FlySpeed = 100
-local BodyGyro = nil
-local BodyVelocity = nil
-local JumpBoost = 0
 
+--// UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LitClientV2"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 280, 0, 46)
+Main.Position = UDim2.new(1, -290, 1, -56)
+Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Main.BorderSizePixel = 0
+Main.BackgroundTransparency = 0.05
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner", Main)
+Corner.CornerRadius = UDim.new(0, 10)
+
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Transparency = 0.8
+Stroke.Thickness = 1.5
+
+local Input = Instance.new("TextBox", Main)
+Input.Size = UDim2.new(1, -80, 1, 0)
+Input.Position = UDim2.new(0, 12, 0, 0)
+Input.BackgroundTransparency = 1
+Input.Text = ""
+Input.PlaceholderText = "LitClient v2 — press ;"
+Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+Input.Font = Enum.Font.GothamBold
+Input.TextSize = 15
+Input.TextXAlignment = Enum.TextXAlignment.Left
+Input.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+Input.ClipsDescendants = true
+
+local ToggleBtn = Instance.new("TextButton", Main)
+ToggleBtn.Size = UDim2.new(0, 46, 1, 0)
+ToggleBtn.Position = UDim2.new(1, -52, 0, 0)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Text = "⬇"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBlack
+ToggleBtn.TextSize = 20
+
+--// FLY GLOBALS
+local BodyGyro, BodyVelocity = nil, nil
+
+--// NOTIF FUNCTION
+local function Notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title;
+            Text = text;
+            Duration = duration or 2;
+        })
+    end)
+end
+
+--// PERFECT FLY 2025
 local function StartFly(speed)
     if Flying then return end
     Flying = true
-    FlySpeed = tonumber(speed) or 100
+    FlySpeed = tonumber(speed) or 120
 
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait():WaitForChild("Character")
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local root = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
 
     hum.PlatformStand = true
 
-    -- BodyGyro (camera direction)
     BodyGyro = Instance.new("BodyGyro")
-    ")
     BodyGyro.P = 15000
-    BodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+    BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
     BodyGyro.CFrame = root.CFrame
     BodyGyro.Parent = root
 
-    -- BodyVelocity (movement)
     BodyVelocity = Instance.new("BodyVelocity")
-    BodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+    BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     BodyVelocity.Velocity = Vector3.new(0,0,0)
     BodyVelocity.Parent = root
 
-    -- Jump = instant boost
+    local boost = 0
     local jumpConn = UserInputService.JumpRequest:Connect(function()
-        if Flying then JumpBoost = 50 end
+        if Flying then boost = 60 end
     end)
 
     local loop = RunService.RenderStepped:Connect(function(dt)
-        if not (Flying and root and root.Parent) then StopFly() return end
+        if not (Flying and root.Parent) then StopFly() return end
 
         local cam = workspace.CurrentCamera
         local move = hum.MoveDirection * FlySpeed
 
-        local forward = move.Magnitude > 0 and move.Unit or Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit * (move.Magnitude / 1)
+        local forward = move.Magnitude > 0 and move.Unit or Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
+        local up = cam.CFrame.LookVector.Y * 80
 
-        local up = cam.CFrame.LookVector.Y * 70
-        if JumpBoost > 0 then
-            up = up + JumpBoost
-            JumpBoost = JumpBoost - 120 * dt
+        if boost > 0 then
+            up = up + boost
+            boost = boost - 150 * dt
         end
 
         BodyVelocity.Velocity = forward * FlySpeed + Vector3.new(0, up, 0)
         BodyGyro.CFrame = CFrame.new(Vector3.new(), cam.CFrame.LookVector)
     end)
 
-    -- Auto cleanup on death
-    local died; died = hum.Died:Connect(function() StopFly() died:Disconnect() end)
+    hum.Died:Connect(StopFly)
 
-    -- Save connections for StopFly
-    StartFly._loop = loop
-    StartFly._jump = jumpConn
+    StartFly.Loop = loop
+    StartFly.Jump = jumpConn
 
-    game:GetService("StarterGui"):SetCore("SendNotification",{
-        Title = "LitClient", Text = "Fly ON — Speed: "..FlySpeed, Duration = 2})
+    Notify("LitClient", "Fly enabled — "..FlySpeed.." studs/s", 2)
 end
 
 function StopFly()
     if not Flying then return end
     Flying = false
 
-    if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
-    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
-    if StartFly._loop then StartFly._loop:Disconnect() StartFly._loop = nil end
-    if StartFly._jump then StartFly._jump:Disconnect() StartFly._jump = nil end
+    if BodyGyro then BodyGyro:Destroy() end
+    if BodyVelocity then BodyVelocity:Destroy() end
+    if StartFly.Loop then StartFly.Loop:Disconnect() end
+    if StartFly.Jump then StartFly.Jump:Disconnect() end
+
+    BodyGyro = nil; BodyVelocity = nil
 
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if hum then hum.PlatformStand = false end
 
-    game:GetService("StarterGui"):SetCore("SendNotification",{
-        Title = "LitClient", Text = "Fly OFF", Duration = 1.5})
+    Notify("LitClient", "Fly disabled", 1.5)
 end
 
---// COMMAND TABLE (Edit Here)
+--// COMMANDS
 local Commands = {
-    {
-        Name = "fly", 
-        Desc = "Toggle flight mode, optional speed (e.g., ;fly 150)", 
-        Func = function(args) 
-            if Flying then 
-                StopFly() 
-            else 
-                StartFly(args[1]) 
-            end 
+    fly = function(args)
+        if Flying then StopFly() else StartFly(args[1]) end
+    end,
+    unfly = StopFly,
+    speed = function(args)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum and args[1] then
+            hum.WalkSpeed = tonumber(args[1]) or 16
+            Notify("LitClient", "WalkSpeed → "..hum.WalkSpeed)
         end
-    },
-    {
-        Name = "unfly",
-        Desc = "Stops flight mode immediately",
-        Func = StopFly
-    },
-    {
-        Name = "speed", 
-        Desc = "Set walkspeed (e.g. ;speed 100)", 
-        Func = function(args)
-            if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").WalkSpeed = tonumber(args[1]) or 16
-            end
+    end,
+    jp = function(args)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum and args[1] then
+            hum.JumpPower = tonumber(args[1]) or 50
+            Notify("LitClient", "JumpPower → "..hum.JumpPower)
         end
-    },
-    {
-        Name = "jump", 
-        Desc = "Set jumppower (e.g. ;jump 100)", 
-        Func = function(args)
-            if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").JumpPower = tonumber(args[1]) or 50
-            end
-        end
-    },
-    {
-        Name = "esp",
-        Desc = "Highlight all players",
-        Func = function()
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    if not p.Character:FindFirstChild("Highlight") then
-                        local h = Instance.new("Highlight", p.Character)
-                        h.FillColor = Color3.fromRGB(255, 0, 0)
-                        h.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        h.FillTransparency = 0.5
-                    end
+    end,
+    esp = function()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                if not p.Character:FindFirstChild("LitESP") then
+                    local hl = Instance.new("Highlight", p.Character)
+                    hl.Name = "LitESP"
+                    hl.FillTransparency = 0.4
+                    hl.OutlineTransparency = 0
+                    hl.FillColor = Color3.fromRGB(255, 0, 100)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                 end
             end
         end
-    },
-    {
-        Name = "rejoin",
-        Desc = "Rejoins the server",
-        Func = function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
-        end
-    }
+        Notify("LitClient", "ESP enabled")
+    end,
+    rejoin = function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end,
+    rj = function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end,
 }
 
---// UI CONSTRUCTION
-local LitGUI = Instance.new("ScreenGui")
-LitGUI.Name = "LitClientFE"
-LitGUI.Parent = CoreGui
-LitGUI.ResetOnSpawn = false
+--// EXECUTE
+local function Execute(str)
+    if str == "" then return end
+    local args = str:split(" ")
+    local cmd = table.remove(args, 1):lower():gsub(Prefix, "")
 
--- 1. Main Bar (Bottom Right)
-local MainBar = Instance.new("Frame")
-MainBar.Name = "MainBar"
-MainBar.Parent = LitGUI
-MainBar.BackgroundColor3 = Config.Color
-MainBar.BackgroundTransparency = 0.1
-MainBar.Position = UDim2.new(1, -260, 1, -50) -- Locked Bottom Right Corner
-MainBar.Size = UDim2.new(0, 250, 0, 35)
-MainBar.BorderSizePixel = 0
-MainBar.Active = true
-MainBar.Draggable = false -- HARDCODED: No longer draggable!
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 6)
-Corner.Parent = MainBar
-
--- Input Box
-local Input = Instance.new("TextBox")
-Input.Parent = MainBar
-Input.BackgroundTransparency = 1
-Input.Position = UDim2.new(0, 10, 0, 0)
-Input.Size = UDim2.new(1, -40, 1, 0)
-Input.Font = Enum.Font.GothamBold
-Input.PlaceholderText = "Command Bar (;)"
-Input.Text = ""
-Input.TextColor3 = Config.Accent
-Input.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-Input.TextSize = 14
-Input.TextXAlignment = Enum.TextXAlignment.Left
-
--- Toggle Button (For the list)
-local ListToggle = Instance.new("TextButton")
-ListToggle.Parent = MainBar
-ListToggle.BackgroundTransparency = 1
-ListToggle.Position = UDim2.new(1, -30, 0, 0)
-ListToggle.Size = UDim2.new(0, 30, 1, 0)
-ListToggle.Font = Enum.Font.GothamBold
-ListToggle.Text = "+"
-ListToggle.TextColor3 = Config.Accent
-ListToggle.TextSize = 18
-
--- 2. Command List (Hidden by default, pops up above bar)
-local ListFrame = Instance.new("Frame")
-ListFrame.Name = "ListFrame"
-ListFrame.Parent = MainBar
-ListFrame.BackgroundColor3 = Config.Color
-ListFrame.BackgroundTransparency = 0.1
-ListFrame.Position = UDim2.new(0, 0, 0, 0) -- Starts closed
-ListFrame.Size = UDim2.new(1, 0, 0, 0) -- Height 0
-ListFrame.ClipsDescendants = true
-ListFrame.BorderSizePixel = 0
-ListFrame.ZIndex = 0
-
-local ListCorner = Instance.new("UICorner")
-ListCorner.CornerRadius = UDim.new(0, 6)
-ListCorner.Parent = ListFrame
-
-local Scroller = Instance.new("ScrollingFrame")
-Scroller.Parent = ListFrame
-Scroller.BackgroundTransparency = 1
-Scroller.Position = UDim2.new(0, 5, 0, 5)
-Scroller.Size = UDim2.new(1, -10, 1, -10)
-Scroller.CanvasSize = UDim2.new(0, 0, 0, 0)
-Scroller.ScrollBarThickness = 2
-
-local UIList = Instance.new("UIListLayout")
-UIList.Parent = Scroller
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-
---// FUNCTIONS
-local ListOpen = false
-
-local function ToggleList()
-    ListOpen = not ListOpen
-    local targetSize = ListOpen and UDim2.new(1, 0, 0, 200) or UDim2.new(1, 0, 0, 0)
-    local targetPos = ListOpen and UDim2.new(0, 0, 1, -240) or UDim2.new(0, 0, 0, 0) -- Slide UP
-    
-    ListToggle.Text = ListOpen and " ^" or "+" -- Update button text for clarity
-
-    TweenService:Create(ListFrame, TweenInfo.new(Config.Speed, Enum.EasingStyle.Quart), {
-        Size = targetSize,
-        Position = targetPos
-    }):Play()
-end
-
-local function PopulateList()
-    -- Clear old
-    for _, v in pairs(Scroller:GetChildren()) do
-        if v:IsA("TextLabel") then v:Destroy() end
-    end
-    
-    local ySize = 0
-    for i, cmd in pairs(Commands) do
-        local lbl = Instance.new("TextLabel")
-        lbl.Parent = Scroller
-        lbl.BackgroundTransparency = 1
-        lbl.Size = UDim2.new(1, 0, 0, 25)
-        lbl.Font = Enum.Font.Gotham
-        lbl.TextColor3 = Config.Accent
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.Text = Config.Prefix .. cmd.Name .. " - " .. cmd.Desc
-        lbl.TextSize = 12
-        ySize = ySize + 25
-    end
-    Scroller.CanvasSize = UDim2.new(0, 0, 0, ySize)
-end
-
-local function Execute(text)
-    local args = text:split(" ")
-    local cmdName = table.remove(args, 1):lower()
-    
-    if string.sub(cmdName, 1, 1) == Config.Prefix then
-        cmdName = string.sub(cmdName, 2)
-    end
-
-    local found = false
-    for _, cmd in pairs(Commands) do
-        if cmd.Name:lower() == cmdName then
-            cmd.Func(args)
-            found = true
-            -- Visual Feedback
-            Input.PlaceholderText = "Executed: " .. cmdName
-            wait(1)
-            Input.PlaceholderText = "Command Bar (;) • LitClient FE (v1.0.3)"
-            break
-        end
-    end
-    
-    if not found then
-        Input.PlaceholderText = "Invalid Command"
-        wait(1)
-        Input.PlaceholderText = "Command Bar"
+    if Commands[cmd] then
+        Commands[cmd](args)
+        Input.PlaceholderText = "✔ "..cmd
+        task.wait(1.2)
+        Input.PlaceholderText = "LitClient v2 — press ;"
+    else
+        Input.PlaceholderText = "❌ unknown cmd"
+        task.wait(1.2)
+        Input.PlaceholderText = "LitClient v2 — press ;"
     end
 end
 
---// EVENTS
-ListToggle.MouseButton1Click:Connect(ToggleList)
-
+--// INPUT
 Input.FocusLost:Connect(function(enter)
-    if enter and Input.Text ~= "" then
-        Execute(Input.Text)
+    if enter then
+        if Input.Text:sub(1,1) == Prefix then
+            Execute(Input.Text)
+        elseif Input.Text ~= "" then
+            Execute(Prefix .. Input.Text)
+        end
         Input.Text = ""
     end
 end)
 
--- Initialize List
-PopulateList()
+-- Open with ; anywhere
+UserInputService.InputBegan:Connect(function(i)
+    if i.KeyCode == Enum.KeyCode.Semicolon and not UserInputService:GetFocusedTextBox() then
+        Input:CaptureFocus()
+        Input.Text = Prefix
+    end
+end)
 
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "LitClient FE";
-    Text = "Loaded!";
-    Duration = 0.7;
-})
+Notify("LitClient v2", "Loaded — press ; to open", 3)
