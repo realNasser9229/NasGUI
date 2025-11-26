@@ -1,0 +1,517 @@
+--[[
+    LitClient FE | v1.0.3
+    Inspired by Infinite Yield
+    
+    A high-effort, modular Admin GUI for Roblox.
+    
+    HOW TO ADD COMMANDS:
+    Scroll down to the 'CommandLogic' table.
+    Format:
+    ["commandname"] = {
+        ["Alias"] = {"cmd", "c"},
+        ["Description"] = "Description of what it does",
+        ["Function"] = function(args)
+            -- Your code here
+        end
+    }
+]]
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local ViewportSize = workspace.CurrentCamera.ViewportSize
+
+--// CONFIGURATION & THEME
+local Settings = {
+    Prefix = ";",
+    Version = "v1.0.3",
+    Name = "LitClient FE",
+    Theme = {
+        Background = Color3.fromRGB(30, 30, 35),
+        Darker = Color3.fromRGB(20, 20, 25),
+        Accent = Color3.fromRGB(114, 137, 218), -- Blurple
+        Text = Color3.fromRGB(235, 235, 235),
+        TextDim = Color3.fromRGB(150, 150, 150),
+        Red = Color3.fromRGB(255, 85, 85)
+    }
+}
+
+--// UI CREATION HELPER
+local function Create(instanceType, properties)
+    local instance = Instance.new(instanceType)
+    for k, v in pairs(properties) do
+        instance[k] = v
+    end
+    return instance
+end
+
+local function Round(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = instance
+    return corner
+end
+
+--// GUI INITIALIZATION
+local ScreenGui = Create("ScreenGui", {
+    Name = "LitClientGUI",
+    Parent = (game:GetService("RunService"):IsStudio() and LocalPlayer.PlayerGui) or CoreGui,
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+
+-- Main Container
+local MainFrame = Create("Frame", {
+    Name = "MainFrame",
+    Parent = ScreenGui,
+    BackgroundColor3 = Settings.Theme.Background,
+    Position = UDim2.new(0.5, -250, 0.5, -175),
+    Size = UDim2.new(0, 500, 0, 350),
+    BorderSizePixel = 0,
+    Active = true,
+    Draggable = true
+})
+Round(MainFrame, 8)
+
+-- Shadow
+local Shadow = Create("ImageLabel", {
+    Name = "Shadow",
+    Parent = MainFrame,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, -15, 0, -15),
+    Size = UDim2.new(1, 30, 1, 30),
+    ZIndex = 0,
+    Image = "rbxassetid://5554236805",
+    ImageColor3 = Color3.fromRGB(0, 0, 0),
+    ScaleType = Enum.ScaleType.Slice,
+    SliceCenter = Rect.new(23, 23, 277, 277)
+})
+
+-- Top Bar
+local TopBar = Create("Frame", {
+    Name = "TopBar",
+    Parent = MainFrame,
+    BackgroundColor3 = Settings.Theme.Darker,
+    Size = UDim2.new(1, 0, 0, 40),
+    BorderSizePixel = 0
+})
+Round(TopBar, 8)
+
+-- Fix rounded corners at bottom of topbar
+local TopBarFiller = Create("Frame", {
+    Parent = TopBar,
+    BackgroundColor3 = Settings.Theme.Darker,
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 0, 1, -5),
+    Size = UDim2.new(1, 0, 0, 5),
+    ZIndex = 0
+})
+
+local Title = Create("TextLabel", {
+    Parent = TopBar,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 15, 0, 0),
+    Size = UDim2.new(0, 200, 1, 0),
+    Font = Enum.Font.GothamBold,
+    Text = Settings.Name .. " <font color='rgb(150,150,150)'>" .. Settings.Version .. "</font>",
+    TextColor3 = Settings.Theme.Text,
+    TextSize = 16,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    RichText = true
+})
+
+-- Close Button
+local CloseBtn = Create("TextButton", {
+    Parent = TopBar,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(1, -40, 0, 0),
+    Size = UDim2.new(0, 40, 1, 0),
+    Font = Enum.Font.GothamBold,
+    Text = "X",
+    TextColor3 = Settings.Theme.Red,
+    TextSize = 16
+})
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Content Area
+local Content = Create("Frame", {
+    Parent = MainFrame,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 0, 0, 45),
+    Size = UDim2.new(1, 0, 1, -95) -- Adjusted for command bar
+})
+
+--// COMMAND LOGIC & STORAGE
+local CommandLogic = {} -- Storage
+local CommandsList = {} -- Array for the list UI
+
+-- Helper to add commands easily
+local function AddCmd(name, aliases, desc, func)
+    CommandLogic[string.lower(name)] = {
+        ["Alias"] = aliases,
+        ["Description"] = desc,
+        ["Function"] = func
+    }
+    table.insert(CommandsList, {Name = name, Desc = desc, Alias = table.concat(aliases, ", ")})
+end
+
+--// NOTIFICATION SYSTEM
+local function Notify(title, text, duration)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title;
+        Text = text;
+        Duration = duration or 3;
+    })
+end
+
+--// COMMAND IMPLEMENTATIONS (The High Effort Stuff)
+
+-- 1. FLY
+local Flying = false
+local FlySpeed = 50
+AddCmd("fly", {"flight", "f"}, "Toggle flight mode (Press E to toggle)", function(args)
+    if Flying then 
+        Flying = false
+        if LocalPlayer.Character:FindFirstChild("LitFlyGyro") then
+            LocalPlayer.Character.LitFlyGyro:Destroy()
+            LocalPlayer.Character.LitFlyVel:Destroy()
+        end
+        Notify("LitClient", "Flight Disabled", 2)
+        return 
+    end
+
+    Flying = true
+    Notify("LitClient", "Flight Enabled", 2)
+    
+    local T = LocalPlayer.Character.HumanoidRootPart
+    local CONTROL = {F = 0, B = 0, L = 0, R = 0}
+    local lCONTROL = {F = 0, B = 0, L = 0, R = 0}
+    local SPEED = 0
+    
+    local function Fly()
+        local BG = Instance.new('BodyGyro', T)
+        local BV = Instance.new('BodyVelocity', T)
+        BG.Name = "LitFlyGyro"
+        BV.Name = "LitFlyVel"
+        BG.P = 9e4
+        BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.cframe = T.CFrame
+        BV.velocity = Vector3.new(0, 0.1, 0)
+        BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        spawn(function()
+            repeat wait()
+                if not Flying then break end
+                if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 then
+                    SPEED = 50
+                elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0) and SPEED ~= 0 then
+                    SPEED = 0
+                end
+                if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                    lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+                elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and SPEED ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                else
+                    BV.velocity = Vector3.new(0, 0.1, 0)
+                end
+                BG.cframe = workspace.CurrentCamera.CoordinateFrame
+            until not Flying
+            CONTROL = {F = 0, B = 0, L = 0, R = 0}
+            lCONTROL = {F = 0, B = 0, L = 0, R = 0}
+            SPEED = 0
+            BG:Destroy()
+            BV:Destroy()
+        end)
+    end
+    
+    Mouse.KeyDown:Connect(function(KEY)
+        if KEY:lower() == 'w' then CONTROL.F = 1
+        elseif KEY:lower() == 's' then CONTROL.B = -1
+        elseif KEY:lower() == 'a' then CONTROL.L = -1 
+        elseif KEY:lower() == 'd' then CONTROL.R = 1
+        end
+    end)
+    Mouse.KeyUp:Connect(function(KEY)
+        if KEY:lower() == 'w' then CONTROL.F = 0
+        elseif KEY:lower() == 's' then CONTROL.B = 0
+        elseif KEY:lower() == 'a' then CONTROL.L = 0
+        elseif KEY:lower() == 'd' then CONTROL.R = 0
+        end
+    end)
+    Fly()
+end)
+
+AddCmd("unfly", {"nofly"}, "Disable flight", function(args)
+    Flying = false
+    if LocalPlayer.Character:FindFirstChild("LitFlyGyro") then
+        LocalPlayer.Character.LitFlyGyro:Destroy()
+        LocalPlayer.Character.LitFlyVel:Destroy()
+    end
+end)
+
+-- 2. WALKSPEED
+AddCmd("speed", {"ws", "walkspeed"}, "Set walkspeed [num]", function(args)
+    local num = tonumber(args[1])
+    if num and LocalPlayer.Character then
+        LocalPlayer.Character.Humanoid.WalkSpeed = num
+        Notify("LitClient", "Speed set to " .. num)
+    end
+end)
+
+-- 3. JUMIPOWER
+AddCmd("jump", {"jp", "jumppower"}, "Set jumppower [num]", function(args)
+    local num = tonumber(args[1])
+    if num and LocalPlayer.Character then
+        LocalPlayer.Character.Humanoid.UseJumpPower = true
+        LocalPlayer.Character.Humanoid.JumpPower = num
+        Notify("LitClient", "JumpPower set to " .. num)
+    end
+end)
+
+-- 4. NOCLIP
+local Noclipping = false
+AddCmd("noclip", {"clip"}, "Walk through walls", function(args)
+    Noclipping = true
+    Notify("LitClient", "Noclip Enabled")
+    RunService:BindToRenderStep("LitNoclip", 100, function()
+        if Noclipping and LocalPlayer.Character then
+            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") and v.CanCollide == true then
+                    v.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
+
+AddCmd("clip", {"unnoclip"}, "Disable noclip", function(args)
+    Noclipping = false
+    RunService:UnbindFromRenderStep("LitNoclip")
+    Notify("LitClient", "Noclip Disabled")
+end)
+
+-- 5. ESP (Simple Chams)
+local ESPEnabled = false
+AddCmd("esp", {"chams"}, "See players through walls", function(args)
+    ESPEnabled = true
+    Notify("LitClient", "ESP Enabled")
+    
+    local function ApplyESP(plr)
+        if plr == LocalPlayer then return end
+        if plr.Character then
+            for _, v in pairs(plr.Character:GetChildren()) do
+                if v:IsA("BasePart") and not v:FindFirstChild("LitESP") then
+                    local box = Instance.new("BoxHandleAdornment")
+                    box.Name = "LitESP"
+                    box.Adornee = v
+                    box.AlwaysOnTop = true
+                    box.ZIndex = 5
+                    box.Size = v.Size
+                    box.Transparency = 0.5
+                    box.Color3 = Settings.Theme.Accent
+                    box.Parent = v
+                end
+            end
+        end
+    end
+
+    -- Loop existing
+    for _, p in pairs(Players:GetPlayers()) do ApplyESP(p) end
+    -- Connect new
+    Players.PlayerAdded:Connect(function(p)
+        p.CharacterAdded:Connect(function() 
+            if ESPEnabled then wait(1) ApplyESP(p) end 
+        end)
+    end)
+end)
+
+AddCmd("unesp", {"nochams"}, "Remove ESP", function(args)
+    ESPEnabled = false
+    Notify("LitClient", "ESP Disabled")
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name == "LitESP" then v:Destroy() end
+    end
+end)
+
+-- 6. GOTO
+AddCmd("goto", {"to", "tp"}, "Teleport to a player [partial name]", function(args)
+    if not args[1] then return end
+    local targetName = args[1]:lower()
+    local target = nil
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if string.sub(p.Name:lower(), 1, #targetName) == targetName or string.sub(p.DisplayName:lower(), 1, #targetName) == targetName then
+            target = p
+            break
+        end
+    end
+    
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        Notify("Teleport", "Teleported to " .. target.DisplayName)
+    else
+        Notify("Error", "Player not found")
+    end
+end)
+
+--// COMMAND LIST GUI (The Scrolling Frame Feature)
+
+-- Tab Button
+local ListTab = Create("Frame", {
+    Parent = Content,
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 1, 0)
+})
+
+local ScrollList = Create("ScrollingFrame", {
+    Name = "CmdList",
+    Parent = ListTab,
+    Active = true,
+    BackgroundColor3 = Settings.Theme.Darker,
+    BackgroundTransparency = 0.5,
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 10, 0, 10),
+    Size = UDim2.new(1, -20, 1, -20),
+    CanvasSize = UDim2.new(0, 0, 0, 0), -- Auto adjusts below
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Settings.Theme.Accent
+})
+Round(ScrollList, 6)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScrollList
+UIListLayout.SortOrder = Enum.SortOrder.Name
+UIListLayout.Padding = UDim.new(0, 5)
+
+-- Padding for list
+local UIPadding = Instance.new("UIPadding")
+UIPadding.Parent = ScrollList
+UIPadding.PaddingLeft = UDim.new(0, 10)
+UIPadding.PaddingTop = UDim.new(0, 10)
+
+-- GENERATE LIST ITEMS
+for _, cmdData in pairs(CommandsList) do
+    local CmdFrame = Create("Frame", {
+        Parent = ScrollList,
+        BackgroundColor3 = Settings.Theme.Background,
+        Size = UDim2.new(1, -10, 0, 40),
+        BorderSizePixel = 0
+    })
+    Round(CmdFrame, 4)
+    
+    local NameLbl = Create("TextLabel", {
+        Parent = CmdFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 5),
+        Size = UDim2.new(1, -20, 0, 15),
+        Font = Enum.Font.GothamBold,
+        Text = Settings.Prefix .. cmdData.Name .. " <font color='rgb(100,100,100)'>(" .. cmdData.Alias .. ")</font>",
+        TextColor3 = Settings.Theme.Accent,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        RichText = true
+    })
+    
+    local DescLbl = Create("TextLabel", {
+        Parent = CmdFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 22),
+        Size = UDim2.new(1, -20, 0, 15),
+        Font = Enum.Font.Gotham,
+        Text = cmdData.Desc,
+        TextColor3 = Settings.Theme.TextDim,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+end
+
+-- Resize Canvas
+ScrollList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
+
+--// COMMAND BAR INPUT (Bottom of GUI)
+local CmdBarFrame = Create("Frame", {
+    Parent = MainFrame,
+    BackgroundColor3 = Settings.Theme.Darker,
+    Position = UDim2.new(0, 10, 1, -45),
+    Size = UDim2.new(1, -20, 0, 35),
+    BorderSizePixel = 0
+})
+Round(CmdBarFrame, 6)
+
+local CmdInput = Create("TextBox", {
+    Parent = CmdBarFrame,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 0),
+    Size = UDim2.new(1, -10, 1, 0),
+    Font = Enum.Font.Gotham,
+    Text = "",
+    PlaceholderText = "Enter command here...",
+    PlaceholderColor3 = Settings.Theme.TextDim,
+    TextColor3 = Settings.Theme.Text,
+    TextSize = 14,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ClearTextOnFocus = false
+})
+
+--// EXECUTION HANDLER
+local function ExecuteCommand(text)
+    -- Remove prefix if typed manually
+    if string.sub(text, 1, 1) == Settings.Prefix then
+        text = string.sub(text, 2)
+    end
+    
+    local args = text:split(" ")
+    local cmdName = table.remove(args, 1):lower()
+    
+    -- Search commands
+    local found = nil
+    if CommandLogic[cmdName] then
+        found = CommandLogic[cmdName]
+    else
+        -- Check aliases
+        for _, data in pairs(CommandLogic) do
+            for _, alias in pairs(data.Alias) do
+                if alias == cmdName then
+                    found = data
+                    break
+                end
+            end
+        end
+    end
+    
+    if found then
+        found.Function(args)
+    else
+        Notify("LitClient", "Command not found!", 2)
+    end
+end
+
+-- Listen for Enter Key in the box
+CmdInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and CmdInput.Text ~= "" then
+        ExecuteCommand(CmdInput.Text)
+        CmdInput.Text = ""
+    end
+end)
+
+-- Initialize
+Notify("LitClient FE", "Loaded " .. Settings.Version .. ". Press ' to focus command bar.", 4)
+
+-- Hotkey to focus command bar (Quote key ')
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Quote then
+        CmdInput:CaptureFocus()
+        task.wait()
+        CmdInput.Text = "" -- clear the quote char
+    end
+end)
