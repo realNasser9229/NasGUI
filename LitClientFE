@@ -1,6 +1,6 @@
 --[[
     LitClient FE | v1.0.3 (Compact / Mobile Friendly)
-    Style: Infinite Yield (Sleek, Bottom Right)
+    Style: Infinite Yield (Sleek, Bottom Right, Locked Position)
 ]]
 
 local Players = game:GetService("Players")
@@ -26,7 +26,12 @@ local Commands = {
             -- Simple Flight Logic
             local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
-            if root:FindFirstChild("LitFly") then root.LitFly:Destroy() return end
+            if root:FindFirstChild("LitFly") then 
+                root.LitFly:Destroy() 
+                root.LitGyro:Destroy()
+                game:GetService("StarterGui"):SetCore("SendNotification", {Title="LitClient", Text="Flight Disabled"})
+                return 
+            end
             
             local bv = Instance.new("BodyVelocity", root)
             bv.Name = "LitFly"
@@ -47,7 +52,7 @@ local Commands = {
         Desc = "Set walkspeed (e.g. speed 100)", 
         Func = function(args)
             if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(args[1])
+                LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(args[1]) or 16
             end
         end
     },
@@ -56,7 +61,7 @@ local Commands = {
         Desc = "Set jumppower (e.g. jump 50)", 
         Func = function(args)
             if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character.Humanoid.JumpPower = tonumber(args[1])
+                LocalPlayer.Character.Humanoid.JumpPower = tonumber(args[1]) or 50
             end
         end
     },
@@ -68,6 +73,7 @@ local Commands = {
                 if p ~= LocalPlayer and p.Character then
                     local h = Instance.new("Highlight", p.Character)
                     h.FillColor = Color3.fromRGB(255,0,0)
+                    h.OutlineColor = Color3.fromRGB(255, 255, 255)
                 end
             end
         end
@@ -93,11 +99,11 @@ MainBar.Name = "MainBar"
 MainBar.Parent = LitGUI
 MainBar.BackgroundColor3 = Config.Color
 MainBar.BackgroundTransparency = 0.1
-MainBar.Position = UDim2.new(1, -260, 1, -50) -- Bottom Right Corner
+MainBar.Position = UDim2.new(1, -260, 1, -50) -- Locked Bottom Right Corner
 MainBar.Size = UDim2.new(0, 250, 0, 35)
 MainBar.BorderSizePixel = 0
 MainBar.Active = true
-MainBar.Draggable = true -- Simple drag
+MainBar.Draggable = false -- HARDCODED: No longer draggable!
 
 local Corner = Instance.new("UICorner")
 Corner.CornerRadius = UDim.new(0, 6)
@@ -164,6 +170,8 @@ local function ToggleList()
     local targetSize = ListOpen and UDim2.new(1, 0, 0, 200) or UDim2.new(1, 0, 0, 0)
     local targetPos = ListOpen and UDim2.new(0, 0, 1, -240) or UDim2.new(0, 0, 0, 0) -- Slide UP
     
+    ListToggle.Text = ListOpen and " ^" or "+" -- Update button text for clarity
+
     TweenService:Create(ListFrame, TweenInfo.new(Config.Speed, Enum.EasingStyle.Quart), {
         Size = targetSize,
         Position = targetPos
@@ -233,9 +241,8 @@ end)
 -- Initialize List
 PopulateList()
 
--- Draggable fix for mobile smoothness (Optional, standard Draggable is enabled on MainBar)
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "LitClient FE";
-    Text = "Loaded! Bottom Right.";
+    Text = "Loaded!";
     Duration = 3;
 })
