@@ -116,7 +116,7 @@ Input.BackgroundTransparency = 1
 Input.Position = UDim2.new(0, 10, 0, 0)
 Input.Size = UDim2.new(1, -40, 1, 0)
 Input.Font = Enum.Font.GothamBold
-Input.PlaceholderText = "Command Bar (;) • LitClient FE (v1.0.3)"
+Input.PlaceholderText = "Command Bar (;)"
 Input.Text = ""
 Input.TextColor3 = Config.Accent
 Input.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
@@ -216,7 +216,7 @@ local function Execute(text)
             -- Visual Feedback
             Input.PlaceholderText = "Executed: " .. cmdName
             wait(1)
-            Input.PlaceholderText = "Command Bar"
+            Input.PlaceholderText = "Command Bar (;) • LitClient FE (v1.0.3)"
             break
         end
     end
@@ -244,5 +244,5 @@ PopulateList()
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "LitClient FE";
     Text = "Loaded!";
-    Duration = 1;
+    Duration = 0.7;
 })
