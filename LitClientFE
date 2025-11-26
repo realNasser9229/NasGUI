@@ -20,18 +20,17 @@ local Config = {
 --// FLIGHT HANDLERS (New Robust Implementation)
 local Flying = false
 local CurrentFlySpeed = Config.DefaultFlySpeed
-local MovementVector = Vector3.new(0, 0, 0)
 local ControlState = {W=false, S=false, A=false, D=false, E=false, Q=false} -- Track WASD QE
 
 local function UpdateMovementVector(input)
+    -- This handles both PC keys and virtual gamepad/mobile controls
     local key = input.KeyCode.Name
-    local isDown = input.UserInputState == Enum.UserInputState.Begin
+    local isDown = input.UserInputState == Enum.UserInputState.Begin and not input.UserInputState.IsVirtual and not input.UserInputState.IsProcessed
     
     if key == "W" then ControlState.W = isDown
     elseif key == "S" then ControlState.S = isDown
     elseif key == "A" then ControlState.A = isDown
     elseif key == "D" then ControlState.D = isDown
-    -- Add vertical controls for better mobile use
     elseif key == "E" then ControlState.E = isDown -- Up
     elseif key == "Q" then ControlState.Q = isDown -- Down
     end
@@ -40,32 +39,45 @@ end
 local function CalculateVelocity()
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local camera = workspace.CurrentCamera
-    if not root or not camera then return end
+    if not root or not camera then return Vector3.new(0,0,0) end
 
     local camCF = camera.CFrame
-    local x, y, z = 0, 0, 0
+    local x, z = 0, 0
+    local finalDirection = Vector3.new(0, 0, 0)
+    local isMoving = false
 
-    if ControlState.W then z = -1 -- Forward
-    elseif ControlState.S then z = 1 -- Backward
-    end
-    if ControlState.A then x = -1 -- Left
-    elseif ControlState.D then x = 1 -- Right
+    -- 1. Get Z-axis input (Forward/Backward)
+    if ControlState.W then z = -1 isMoving = true
+    elseif ControlState.S then z = 1 isMoving = true
     end
     
-    -- Calculate movement relative to the camera, ignoring Y component for horizontal movement
-    local horizontalMovement = camCF.LookVector * z + camCF.RightVector * x
-    horizontalMovement = Vector3.new(horizontalMovement.X, 0, horizontalMovement.Z)
+    -- 2. Get X-axis input (Left/Right)
+    if ControlState.A then x = -1 isMoving = true
+    elseif ControlState.D then x = 1 isMoving = true
+    end
     
-    -- Vertical movement
+    -- 3. Vertical input (Q/E override for straight up/down)
     local verticalMovement = (ControlState.E and 1 or 0) + (ControlState.Q and -1 or 0)
+    if verticalMovement ~= 0 then isMoving = true end
     
-    local finalVelocity = (horizontalMovement * CurrentFlySpeed) + Vector3.new(0, verticalMovement * CurrentFlySpeed, 0)
+    -- 4. Calculate Camera-Relative Movement Vector
+    -- Forward/Backward (uses full LookVector, allowing pitch to control vertical movement)
+    finalDirection = finalDirection + (camCF.LookVector * z)
     
-    -- Smooth acceleration/deceleration if no input is pressed
-    if finalVelocity.Magnitude < 0.1 and root:FindFirstChild("FlyBV") then
-         root.FlyBV.Velocity = root.FlyBV.Velocity * 0.9 -- Decelerate
+    -- Left/Right (uses RightVector)
+    finalDirection = finalDirection + (camCF.RightVector * x)
+
+    -- Up/Down (pure vertical component)
+    finalDirection = finalDirection + (Vector3.yAxis * verticalMovement)
+    
+    if isMoving and finalDirection.Magnitude > 0.1 then
+        -- Normalize the direction vector and multiply by speed
+        return finalDirection.Unit * CurrentFlySpeed
     else
-         return finalVelocity
+        -- Decelerate if no movement keys are pressed (maintains hover)
+        local currentVelocity = root:FindFirstChild("FlyBV") and root.FlyBV.Velocity or Vector3.new(0, 0.1, 0)
+        -- Apply a slight deceleration factor
+        return currentVelocity * 0.95 
     end
 end
 
@@ -73,24 +85,29 @@ local function FlyLoop(dt)
     if not Flying then return end
 
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     
-    if not root or not humanoid then return end
+    if not root or not root:FindFirstChild("FlyBG") or not root:FindFirstChild("FlyBV") then 
+        StopFly() -- Emergency stop if parts are missing
+        return 
+    end
     
     -- Keep player looking in camera direction
     root.FlyBG.CFrame = workspace.CurrentCamera.CFrame
     
     -- Calculate and apply velocity
-    root.FlyBV.Velocity = CalculateVelocity() or Vector3.new(0,0,0)
+    root.FlyBV.Velocity = CalculateVelocity()
 end
 
 local function StartFly(speed)
-    if Flying then return end
+    if Flying then StopFly() end -- Ensure cleanup if somehow called twice
     
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
 
-    if not root or not humanoid then return end
+    if not root or not humanoid then 
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title="LitClient", Text="Character not available.", Duration = 2})
+        return 
+    end
 
     -- Set Speed
     CurrentFlySpeed = tonumber(speed) or Config.DefaultFlySpeed
@@ -104,12 +121,12 @@ local function StartFly(speed)
     local bv = Instance.new("BodyVelocity", root)
     bv.Name = "FlyBV"
     bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    bv.Velocity = Vector3.new(0, 0.1, 0) -- Tiny upward velocity to counter gravity
+    bv.Velocity = Vector3.new(0, 0.1, 0)
 
     -- Essential settings
     humanoid.PlatformStand = true
     Flying = true
-    game:GetService("StarterGui"):SetCore("SendNotification", {Title="LitClient", Text="Flight Enabled. Speed: " .. CurrentFlySpeed .. ". (W/A/S/D to move, Q/E for vertical)"})
+    game:GetService("StarterGui"):SetCore("SendNotification", {Title="LitClient", Text="Flight Enabled. Speed: " .. CurrentFlySpeed .. ". Use W/A/S/D and Camera to steer."})
     
     -- Bind loop
     RunService:BindToRenderStep("LitClientFly", Enum.RenderPriority.Camera.Value + 1, FlyLoop)
@@ -150,7 +167,7 @@ local Commands = {
     },
     {
         Name = "unfly",
-        Desc = "Stops flight mode",
+        Desc = "Stops flight mode immediately",
         Func = StopFly
     },
     {
