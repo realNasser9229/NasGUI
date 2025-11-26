@@ -18,153 +18,137 @@ local Config = {
 }
 
 -- ==============================
--- LitClient FE — Joystick-friendly Fly
--- Uses Humanoid.MoveDirection + Camera pitch + JumpRequest
+-- LitClient FE — PROPER FLY 2025 (Mobile + PC)
 -- ==============================
 
-local LocalPlayer = Players.LocalPlayer
-local FlyActive = false
-local FlySpeed = 50                      -- studs/second (default)
-local PitchInfluence = 0.9               -- how much camera pitch affects vertical movement (0..1)
-local JumpBoost = 60                     -- immediate upward boost when jump pressed
-local JumpBoostDecay = 6                 -- how quickly jump boost reduces (per second)
-local GravCompensation = 0               -- small upward nudges to avoid falling through small holes
+local Flying = false
+local FlySpeed = 100
+local BodyGyro = nil
+local BodyVelocity = nil
+local JumpBoostActive = 0
 
--- internal state
-local _bindName = "LitClientFlyRender"
-local activeJumpBoost = 0
-
--- Start flying (speed in studs/sec or nil to use default)
 local function StartFly(speed)
-    if FlyActive then return end
-    FlyActive = true
-    FlySpeed = tonumber(speed) or FlySpeed
+    if Flying then return end
+    Flying = true
+    FlySpeed = tonumber(speed) or 100
 
-    local char = LocalPlayer.Character
-    if not char then
-        FlyActive = false
-        return
-    end
-    local hum = char:FindFirstChildWhichIsA("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then
-        FlyActive = false
-        return
-    end
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
 
-    -- Put character in PlatformStand so animations/physics won't fight our movement
     hum.PlatformStand = true
 
-    -- Jump request -> apply an upward boost for a short time
+    -- BodyGyro (keeps you facing camera direction)
+    BodyGyro = Instance.new("BodyGyro")
+    BodyGyro.P = 15000
+    BodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+    BodyGyro.CFrame = hrp.CFrame
+    BodyGyro.Parent = hrp
+
+    -- BodyVelocity (actual movement)
+    BodyVelocity = Instance.new("BodyVelocity")
+    BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    BodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+    BodyVelocity.Parent = hrp
+
+    -- Jump boost on mobile/PC spacebar
     local jumpConn
     jumpConn = UserInputService.JumpRequest:Connect(function()
-        if not FlyActive then return end
-        activeJumpBoost = math.max(activeJumpBoost, JumpBoost)
+        if Flying then
+            JumpBoostActive = 40 -- instant upward kick
+        end
     end)
 
-    -- Render loop: move HRP using MoveDirection + camera pitch + jump boost
-    RunService:BindToRenderStep(_bindName, Enum.RenderPriority.Character.Value, function(dt)
-        if not FlyActive then return end
-        local c = LocalPlayer.Character
-        if not c then
-            -- safety cleanup
-            pcall(function() RunService:UnbindFromRenderStep(_bindName) end)
-            if jumpConn then jumpConn:Disconnect() end
-            FlyActive = false
+    -- Main fly loop
+    local connection
+    connection = RunService.RenderStepped:Connect(function(dt)
+        if not (char and char:FindFirstChild("HumanoidRootPart") and Flying) then
+            StopFly()
             return
         end
 
-        local humanoid = c:FindFirstChildWhichIsA("Humanoid")
-        local hrp2 = c:FindFirstChild("HumanoidRootPart")
-        local camera = workspace.CurrentCamera
-        if not humanoid or not hrp2 or not camera then return end
+        local cam = workspace.CurrentCamera
+        local moveDir = hum.MoveDirection * FlySpeed
+        local camLook = cam.CFrame.LookVector
 
-        -- Movement from joystick / WASD (already world-space)
-        local moveDir = humanoid.MoveDirection -- world-space direction (x,z)
-        local moveMag = moveDir.Magnitude
-
-        -- Determine how much forward/back aligns with camera LookVector (so looking up while moving forward ascends)
-        local camLook = camera.CFrame.LookVector
-        local forwardDot = 0
-        if moveMag > 0 then
-            forwardDot = math.clamp(moveDir.Unit:Dot(Vector3.new(camLook.X, 0, camLook.Z).Unit or Vector3.new(0,0,0)), -1, 1)
+        -- Forward movement aligned with camera
+        local forward = Vector3.new(camLook.X, 0, camLook.Z).Unit * moveDir.Magnitude
+        if moveDir.Magnitude > 0 then
+            forward = moveDir.Unit
         end
 
-        -- camera pitch contribution (range -1..1). positive when looking up.
-        local pitchY = camLook.Y -- -1..1
-
-        -- Vertical from camera pitch only when moving (stronger when moving forward / backward)
-        local pitchVertical = pitchY * forwardDot * PitchInfluence * FlySpeed
-
-        -- Apply jump boost (decays over time)
-        local vb = 0
-        if activeJumpBoost > 0 then
-            vb = activeJumpBoost
-            activeJumpBoost = math.max(0, activeJumpBoost - (JumpBoostDecay * dt))
+        -- Vertical from camera pitch + jump boost
+        local up = 0
+        if UserInputService.TouchEnabled then
+            -- Mobile: stronger upward when looking up
+            up = camLook.Y * 80
+        else
+            up = camLook.Y * 60
         end
 
-        -- Combine horizontal movement with vertical components
-        -- moveDir already contains no vertical component (Humanoid.MoveDirection is horizontal)
-        local horizontal = moveDir * FlySpeed * dt
-        local vertical = (pitchVertical + vb + GravCompensation) * dt
+        -- Jump boost decay
+        if JumpBoostActive > 0 then
+            up = up + JumpBoostActive
+            JumpBoostActive = math.max(0, JumpBoostActive - 120 * dt)
+        end
 
-        -- Final translation
-        local newCFrame = hrp2.CFrame + horizontal + Vector3.new(0, vertical, 0)
+        -- Final velocity
+        local velocity = (forward * FlySpeed) + Vector3.new(0, up, 0)
 
-        -- Smooth teleport using CFrame to avoid physics explosions; this is local-only
-        hrp2.CFrame = newCFrame
+        BodyVelocity.Velocity = velocity
+        BodyGyro.CFrame = CFrame.new(Vector3.new(), camLook)
     end)
 
-    -- store jump connection so we can disconnect on stop
+    -- Auto-cleanup on death
+    local diedConn
+    diedConn = hum.Died:Connect(function()
+        StopFly()
+    end)
+
+    -- Store connections for cleanup
+    StartFly._conn = connection
     StartFly._jumpConn = jumpConn
+    StartFly._diedConn = diedConn
 
-    -- notify
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "LitClient",
-            Text = "Flight enabled. Speed: ".. tostring(FlySpeed),
-            Duration = 2
-        })
-    end)
+    -- Notification
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "LitClient";
+        Text = "Fly ON — Speed: " .. FlySpeed;
+        Duration = 2;
+    })
 end
 
-local function StopFly()
-    if not FlyActive then return end
-    FlyActive = false
+function StopFly()
+    if not Flying then return end
+    Flying = false
 
-    -- unbind render loop
-    pcall(function() RunService:UnbindFromRenderStep(_bindName) end)
+    if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
+    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
 
-    -- disconnect jump conn if present
-    if StartFly._jumpConn then
-        pcall(function() StartFly._jumpConn:Disconnect() end)
-        StartFly._jumpConn = nil
-    end
+    if StartFly._conn then StartFly._conn:Disconnect() StartFly._conn = nil end
+    if StartFly._jumpConn then StartFly._jumpConn:Disconnect() StartFly._jumpConn = nil end
+    if StartFly._diedConn then StartFly._diedConn:Disconnect() StartFly._diedConn = nil end
 
-    -- restore platformstand
     local char = LocalPlayer.Character
-    if char then
-        local hum = char:FindFirstChildWhichIsA("Humanoid")
-        if hum then hum.PlatformStand = false end
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.PlatformStand = false
     end
 
-    -- notify
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "LitClient",
-            Text = "Flight disabled.",
-            Duration = 1
-        })
-    end)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "LitClient";
+        Text = "Fly OFF";
+        Duration = 1.5;
+    })
 end
 
--- expose StartFly/StopFly (if you integrate into commands table, call StartFly(args[1]) / StopFly())
--- Example commands (replace your existing fly/unfly command functions):
--- Commands entry:
--- { Name = "fly", Func = function(args) if FlyActive then StopFly() else StartFly(args[1]) end end }
--- { Name = "unfly", Func = StopFly }
-
--- End of fly module
+-- Fix your command table (you had "Flying" instead of "FlyActive" or whatever)
+for _, cmd in pairs(Commands) do
+    if cmd.Name == "fly" then
+        cmd.Func = function(args)
+            if Flying then StopFly() else StartFly(args[1]) end
+        end
+    end
+end
 
 --// COMMAND TABLE (Edit Here)
 local Commands = {
