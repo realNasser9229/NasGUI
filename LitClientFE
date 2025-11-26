@@ -18,104 +18,75 @@ local Config = {
 }
 
 -- ==============================
--- LitClient FE — PROPER FLY 2025 (Mobile + PC)
+-- LitClient FE — PERFECT FLY 2025 (Mobile + PC) 
 -- ==============================
+
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Flying = false
 local FlySpeed = 100
 local BodyGyro = nil
 local BodyVelocity = nil
-local JumpBoostActive = 0
+local JumpBoost = 0
 
 local function StartFly(speed)
     if Flying then return end
     Flying = true
     FlySpeed = tonumber(speed) or 100
 
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait():WaitForChild("Character")
+    local root = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
 
     hum.PlatformStand = true
 
-    -- BodyGyro (keeps you facing camera direction)
+    -- BodyGyro (camera direction)
     BodyGyro = Instance.new("BodyGyro")
+    ")
     BodyGyro.P = 15000
     BodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
-    BodyGyro.CFrame = hrp.CFrame
-    BodyGyro.Parent = hrp
+    BodyGyro.CFrame = root.CFrame
+    BodyGyro.Parent = root
 
-    -- BodyVelocity (actual movement)
+    -- BodyVelocity (movement)
     BodyVelocity = Instance.new("BodyVelocity")
-    BodyVelocity.Velocity = Vector3.new(0, 0, 0)
     BodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
-    BodyVelocity.Parent = hrp
+    BodyVelocity.Velocity = Vector3.new(0,0,0)
+    BodyVelocity.Parent = root
 
-    -- Jump boost on mobile/PC spacebar
-    local jumpConn
-    jumpConn = UserInputService.JumpRequest:Connect(function()
-        if Flying then
-            JumpBoostActive = 40 -- instant upward kick
-        end
+    -- Jump = instant boost
+    local jumpConn = UserInputService.JumpRequest:Connect(function()
+        if Flying then JumpBoost = 50 end
     end)
 
-    -- Main fly loop
-    local connection
-    connection = RunService.RenderStepped:Connect(function(dt)
-        if not (char and char:FindFirstChild("HumanoidRootPart") and Flying) then
-            StopFly()
-            return
-        end
+    local loop = RunService.RenderStepped:Connect(function(dt)
+        if not (Flying and root and root.Parent) then StopFly() return end
 
         local cam = workspace.CurrentCamera
-        local moveDir = hum.MoveDirection * FlySpeed
-        local camLook = cam.CFrame.LookVector
+        local move = hum.MoveDirection * FlySpeed
 
-        -- Forward movement aligned with camera
-        local forward = Vector3.new(camLook.X, 0, camLook.Z).Unit * moveDir.Magnitude
-        if moveDir.Magnitude > 0 then
-            forward = moveDir.Unit
+        local forward = move.Magnitude > 0 and move.Unit or Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit * (move.Magnitude / 1)
+
+        local up = cam.CFrame.LookVector.Y * 70
+        if JumpBoost > 0 then
+            up = up + JumpBoost
+            JumpBoost = JumpBoost - 120 * dt
         end
 
-        -- Vertical from camera pitch + jump boost
-        local up = 0
-        if UserInputService.TouchEnabled then
-            -- Mobile: stronger upward when looking up
-            up = camLook.Y * 80
-        else
-            up = camLook.Y * 60
-        end
-
-        -- Jump boost decay
-        if JumpBoostActive > 0 then
-            up = up + JumpBoostActive
-            JumpBoostActive = math.max(0, JumpBoostActive - 120 * dt)
-        end
-
-        -- Final velocity
-        local velocity = (forward * FlySpeed) + Vector3.new(0, up, 0)
-
-        BodyVelocity.Velocity = velocity
-        BodyGyro.CFrame = CFrame.new(Vector3.new(), camLook)
+        BodyVelocity.Velocity = forward * FlySpeed + Vector3.new(0, up, 0)
+        BodyGyro.CFrame = CFrame.new(Vector3.new(), cam.CFrame.LookVector)
     end)
 
-    -- Auto-cleanup on death
-    local diedConn
-    diedConn = hum.Died:Connect(function()
-        StopFly()
-    end)
+    -- Auto cleanup on death
+    local died; died = hum.Died:Connect(function() StopFly() died:Disconnect() end)
 
-    -- Store connections for cleanup
-    StartFly._conn = connection
-    StartFly._jumpConn = jumpConn
-    StartFly._diedConn = diedConn
+    -- Save connections for StopFly
+    StartFly._loop = loop
+    StartFly._jump = jumpConn
 
-    -- Notification
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "LitClient";
-        Text = "Fly ON — Speed: " .. FlySpeed;
-        Duration = 2;
-    })
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "LitClient", Text = "Fly ON — Speed: "..FlySpeed, Duration = 2})
 end
 
 function StopFly()
@@ -124,30 +95,14 @@ function StopFly()
 
     if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
     if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+    if StartFly._loop then StartFly._loop:Disconnect() StartFly._loop = nil end
+    if StartFly._jump then StartFly._jump:Disconnect() StartFly._jump = nil end
 
-    if StartFly._conn then StartFly._conn:Disconnect() StartFly._conn = nil end
-    if StartFly._jumpConn then StartFly._jumpConn:Disconnect() StartFly._jumpConn = nil end
-    if StartFly._diedConn then StartFly._diedConn:Disconnect() StartFly._diedConn = nil end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
 
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.PlatformStand = false
-    end
-
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "LitClient";
-        Text = "Fly OFF";
-        Duration = 1.5;
-    })
-end
-
--- Fix your command table (you had "Flying" instead of "FlyActive" or whatever)
-for _, cmd in pairs(Commands) do
-    if cmd.Name == "fly" then
-        cmd.Func = function(args)
-            if Flying then StopFly() else StartFly(args[1]) end
-        end
-    end
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "LitClient", Text = "Fly OFF", Duration = 1.5})
 end
 
 --// COMMAND TABLE (Edit Here)
