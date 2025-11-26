@@ -154,9 +154,13 @@ end
 local Commands = {
     {
         Name = "fly", 
-        Desc = "Toggle flight mode, optional speed (e.g., fly 150)", 
+        Desc = "Toggle flight mode, optional speed (e.g., ;fly 150)", 
         Func = function(args) 
-            if Flying then StopFly() else StartFly(args[1]) end
+            if Flying then 
+                StopFly() 
+            else 
+                StartFly(args[1]) 
+            end 
         end
     },
     {
@@ -166,19 +170,19 @@ local Commands = {
     },
     {
         Name = "speed", 
-        Desc = "Set walkspeed (e.g. speed 100)", 
+        Desc = "Set walkspeed (e.g. ;speed 100)", 
         Func = function(args)
             if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(args[1]) or 16
+                LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").WalkSpeed = tonumber(args[1]) or 16
             end
         end
     },
     {
         Name = "jump", 
-        Desc = "Set jumppower (e.g. jump 50)", 
+        Desc = "Set jumppower (e.g. ;jump 100)", 
         Func = function(args)
             if LocalPlayer.Character and args[1] then
-                LocalPlayer.Character.Humanoid.JumpPower = tonumber(args[1]) or 50
+                LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").JumpPower = tonumber(args[1]) or 50
             end
         end
     },
@@ -188,9 +192,12 @@ local Commands = {
         Func = function()
             for _, p in pairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
-                    local h = Instance.new("Highlight", p.Character)
-                    h.FillColor = Color3.fromRGB(255,0,0)
-                    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    if not p.Character:FindFirstChild("Highlight") then
+                        local h = Instance.new("Highlight", p.Character)
+                        h.FillColor = Color3.fromRGB(255, 0, 0)
+                        h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        h.FillTransparency = 0.5
+                    end
                 end
             end
         end
