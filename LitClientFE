@@ -17,13 +17,15 @@ local Config = {
     Speed = 0.3 -- Animation speed
 }
 
---// FLIGHT HANDLERS (New Robust Implementation)
+
+    --// FLIGHT HANDLERS (Verified Robust Implementation)
 local Flying = false
 local CurrentFlySpeed = Config.DefaultFlySpeed
 local ControlState = {W=false, S=false, A=false, D=false, E=false, Q=false} -- Track WASD QE
 
 local function UpdateMovementVector(input)
     -- This handles both PC keys and virtual gamepad/mobile controls
+    -- Ignores inputs that are virtual (like mobile joystick) or processed (like clicking a UI element)
     local key = input.KeyCode.Name
     local isDown = input.UserInputState == Enum.UserInputState.Begin and not input.UserInputState.IsVirtual and not input.UserInputState.IsProcessed
     
@@ -42,42 +44,31 @@ local function CalculateVelocity()
     if not root or not camera then return Vector3.new(0,0,0) end
 
     local camCF = camera.CFrame
-    local x, z = 0, 0
-    local finalDirection = Vector3.new(0, 0, 0)
+    local movement = Vector3.new(0, 0, 0)
     local isMoving = false
 
-    -- 1. Get Z-axis input (Forward/Backward)
-    if ControlState.W then z = -1 isMoving = true
-    elseif ControlState.S then z = 1 isMoving = true
+    -- 1. Forward/Backward (W/S) - Uses full LookVector (camera direction, including pitch)
+    if ControlState.W then movement = movement + camCF.LookVector isMoving = true
+    elseif ControlState.S then movement = movement - camCF.LookVector isMoving = true
     end
     
-    -- 2. Get X-axis input (Left/Right)
-    if ControlState.A then x = -1 isMoving = true
-    elseif ControlState.D then x = 1 isMoving = true
+    -- 2. Left/Right (A/D) - Uses RightVector (strafe)
+    if ControlState.A then movement = movement - camCF.RightVector isMoving = true
+    elseif ControlState.D then movement = movement + camCF.RightVector isMoving = true
     end
     
-    -- 3. Vertical input (Q/E override for straight up/down)
-    local verticalMovement = (ControlState.E and 1 or 0) + (ControlState.Q and -1 or 0)
-    if verticalMovement ~= 0 then isMoving = true end
+    -- 3. Up/Down (E/Q) - Uses World Y-axis (pure vertical thrust, independent of camera pitch)
+    if ControlState.E then movement = movement + Vector3.yAxis isMoving = true
+    elseif ControlState.Q then movement = movement - Vector3.yAxis isMoving = true
+    end
     
-    -- 4. Calculate Camera-Relative Movement Vector
-    -- Forward/Backward (uses full LookVector, allowing pitch to control vertical movement)
-    finalDirection = finalDirection + (camCF.LookVector * z)
-    
-    -- Left/Right (uses RightVector)
-    finalDirection = finalDirection + (camCF.RightVector * x)
-
-    -- Up/Down (pure vertical component)
-    finalDirection = finalDirection + (Vector3.yAxis * verticalMovement)
-    
-    if isMoving and finalDirection.Magnitude > 0.1 then
-        -- Normalize the direction vector and multiply by speed
-        return finalDirection.Unit * CurrentFlySpeed
+    if isMoving and movement.Magnitude > 0.1 then
+        -- Normalize the combined direction vector and multiply by speed
+        return movement.Unit * CurrentFlySpeed
     else
-        -- Decelerate if no movement keys are pressed (maintains hover)
+        -- Decelerate if not moving, allowing hover in place
         local currentVelocity = root:FindFirstChild("FlyBV") and root.FlyBV.Velocity or Vector3.new(0, 0.1, 0)
-        -- Apply a slight deceleration factor
-        return currentVelocity * 0.95 
+        return currentVelocity * 0.9 -- Smoother deceleration for hover effect
     end
 end
 
