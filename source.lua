@@ -131,7 +131,7 @@ blur:Destroy()
 
 print(">> Nas9229alt's ULTRA OP NasGUI V2.3 Reborn MODDED loaded successfully, GO REKT 'EM KIDDOS NOW!!!!!")
 task.wait(0.5)
-print("SCRIPTER: @nas9229alt (Nasser9229)")
+print("SCRIPTER: @nas9229alt (Nas Dev)")
 task.wait(0.01)
 print("CO-SCRIPTER: @1602sasa/@1602sasa2 (Jan)")
 task.wait(0.01)
